@@ -101,17 +101,33 @@ with st.sidebar:
                         value=cat.get("is_fixed", False),
                         key=f"fixed_{cat['id']}"
                     )
-                if st.button("Update", key=f"update_{cat['id']}"):
-                    try:
-                        st_conn.client.from_("categories").update({
-                            "monthly_budget": new_budget,
-                            "is_fixed": is_fixed
-                        }).eq("id", cat["id"]).execute()
-                        st.success("Updated")
-                        st.cache_data.clear()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+                col_update, col_delete = st.columns(2)
+                with col_update:
+                    if st.button("Update", key=f"update_{cat['id']}"):
+                        try:
+                            st_conn.client.from_("categories").update({
+                                "monthly_budget": new_budget,
+                                "is_fixed": is_fixed
+                            }).eq("id", cat["id"]).execute()
+                            st.success("Updated")
+                            st.cache_data.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                with col_delete:
+                    if st.button("🗑️", key=f"delete_{cat['id']}"):
+                        try:
+                            # Unlink transactions first
+                            st_conn.client.from_("transactions").update({
+                                "category_id": None
+                            }).eq("category_id", cat["id"]).execute()
+                            # Then delete category
+                            st_conn.client.from_("categories").delete().eq("id", cat["id"]).execute()
+                            st.success("Deleted")
+                            st.cache_data.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
 
 # Budget Burn-Down View
 st.subheader("Monthly Budget")
@@ -131,12 +147,12 @@ if categories_data:
     # Summary metrics
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Budget", f"{total_budget:,.0f}")
+        st.metric("Total Budget", f"{total_budget:,.0f}₫")
     with col2:
-        st.metric("Spent", f"{total_spent:,.0f}")
+        st.metric("Spent", f"{total_spent:,.0f}₫")
     with col3:
         delta_color = "normal" if total_remaining >= 0 else "inverse"
-        st.metric("Remaining", f"{total_remaining:,.0f}", delta=f"{total_remaining:,.0f}", delta_color=delta_color)
+        st.metric("Remaining", f"{total_remaining:,.0f}₫", delta=f"{total_remaining:,.0f}₫", delta_color=delta_color)
 
     # Variable expenses (envelopes)
     if variable_cats:
@@ -159,7 +175,7 @@ if categories_data:
             with col_bar:
                 st.progress(progress)
             with col_nums:
-                st.write(f"{spent:,.0f} / {budget:,.0f}")
+                st.write(f"{spent:,.0f}₫ / {budget:,.0f}₫")
 
     # Fixed expenses
     if fixed_cats:
@@ -179,7 +195,7 @@ if categories_data:
                 else:
                     st.write("Pending")
             with col_nums:
-                st.write(f"{spent:,.0f} / {budget:,.0f}")
+                st.write(f"{spent:,.0f}₫ / {budget:,.0f}₫")
 else:
     st.info("No categories configured. Add categories in Supabase to enable budget tracking.")
 
@@ -245,7 +261,7 @@ if "parsed_expense" in st.session_state:
 
         try:
             st_conn.client.from_("transactions").insert(transaction).execute()
-            st.success(f"Saved: {description} - {amount:,.0f}")
+            st.success(f"Saved: {description} - {amount:,.0f}₫")
             del st.session_state["parsed_expense"]
             st.rerun()
         except Exception as e:
@@ -273,6 +289,62 @@ if rows.data:
     for row in rows.data:
         cat_name = row.get("categories", {}).get("name", "—") if row.get("categories") else "—"
         annie_tag = " 👶" if row.get("is_annie_related") else ""
-        st.write(f"**{row['date']}** | {row['description']} | {row['amount']:,.0f} | {cat_name}{annie_tag}")
+        col_info, col_edit, col_del = st.columns([7, 1, 1])
+        with col_info:
+            st.write(f"**{row['date']}** | {row['description']} | {row['amount']:,.0f}₫ | {cat_name}{annie_tag}")
+        with col_edit:
+            if st.button("✏️", key=f"edit_tx_{row['id']}"):
+                st.session_state["edit_transaction"] = row
+                st.rerun()
+        with col_del:
+            if st.button("🗑️", key=f"del_tx_{row['id']}"):
+                try:
+                    st_conn.client.from_("transactions").delete().eq("id", row["id"]).execute()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
 else:
     st.info("No transactions yet")
+
+# Edit transaction form
+if "edit_transaction" in st.session_state:
+    tx = st.session_state["edit_transaction"]
+    st.subheader("Edit Transaction")
+    with st.form("edit_tx_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            edit_amount = st.number_input("Amount", value=float(tx["amount"]), min_value=0.0)
+            current_cat = tx.get("categories", {}).get("name") if tx.get("categories") else None
+            cat_index = category_names.index(current_cat) if current_cat in category_names else 0
+            edit_category = st.selectbox("Category", options=category_names, index=cat_index)
+        with col2:
+            edit_description = st.text_input("Description", value=tx.get("description") or "")
+            edit_date = st.date_input("Date", value=date.fromisoformat(tx["date"]) if tx.get("date") else date.today())
+        edit_annie = st.checkbox("Annie-related", value=tx.get("is_annie_related", False))
+
+        col_save, col_cancel = st.columns(2)
+        with col_save:
+            save_edit = st.form_submit_button("Save Changes", type="primary")
+        with col_cancel:
+            cancel_edit = st.form_submit_button("Cancel")
+
+    if save_edit:
+        category_id = categories.get(edit_category) if categories else None
+        try:
+            update_data = {
+                "amount": edit_amount,
+                "description": edit_description,
+                "is_annie_related": edit_annie,
+                "date": edit_date.isoformat(),
+                "category_id": category_id
+            }
+            st_conn.client.from_("transactions").update(update_data).eq("id", tx["id"]).execute()
+            st.success("Transaction updated")
+            del st.session_state["edit_transaction"]
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+    if cancel_edit:
+        del st.session_state["edit_transaction"]
+        st.rerun()
