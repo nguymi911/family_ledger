@@ -1,7 +1,7 @@
-# Technical Specification & Roadmap: Family Ledger (v1.0)
+# Technical Specification & Roadmap: Annie Budget (v1.0)
 
 ## 1. System Overview
-Family Ledger is a private, web-based financial tracking application designed for a single household. It prioritizes manual entry facilitated by AI natural language processing.
+Annie Budget is a private, web-based financial tracking application designed for a single household. It prioritizes manual entry facilitated by AI natural language processing.
 
 ### Tech Stack
 * **Frontend:** Streamlit (Python 3.11+)

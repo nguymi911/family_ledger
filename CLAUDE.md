@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Family Ledger is a household financial tracking web application with AI-assisted natural language expense entry. It uses envelope-based budgeting and includes mortgage acceleration tracking.
+Annie Budget is a household financial tracking web application with AI-assisted natural language expense entry. It uses envelope-based budgeting and includes mortgage acceleration tracking.
 
 ## Tech Stack
 

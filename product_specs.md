@@ -1,4 +1,4 @@
-# Product Specification: Family Ledger
+# Product Specification: Annie Budget
 
 ## 1. Product Vision
 A private, mindful, and collaborative financial tool designed for a dual-income household to manage daily expenses, track the specific costs of raising a child, and accelerate mortgage repayment through high-frequency tracking and AI-assisted manual entry.
