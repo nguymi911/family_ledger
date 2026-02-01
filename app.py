@@ -86,7 +86,7 @@ model = get_gemini_model()
 # Load categories with budget info
 @st.cache_data(ttl=300)
 def load_categories():
-    result = st_conn.client.from_("categories").select("id, name, monthly_budget, is_fixed").execute()
+    result = st_conn.client.from_("categories").select("id, name, monthly_budget").execute()
     return result.data
 
 def get_category_map(categories_data):
@@ -141,14 +141,12 @@ with st.sidebar:
     with st.expander("Add Category"):
         new_name = st.text_input("Name", key="new_cat_name")
         new_budget = st.number_input("Monthly Budget", min_value=0.0, key="new_cat_budget")
-        new_fixed = st.checkbox("Fixed expense", key="new_cat_fixed")
         if st.button("Add"):
             if new_name:
                 try:
                     st_conn.client.from_("categories").insert({
                         "name": new_name,
-                        "monthly_budget": new_budget,
-                        "is_fixed": new_fixed
+                        "monthly_budget": new_budget
                     }).execute()
                     st.success(f"Added {new_name}")
                     st.cache_data.clear()
@@ -161,26 +159,17 @@ with st.sidebar:
         with st.expander("Edit Categories"):
             for cat in categories_data:
                 st.write(f"**{cat['name']}**")
-                col1, col2 = st.columns(2)
-                with col1:
-                    new_budget = st.number_input(
-                        "Budget",
-                        value=float(cat.get("monthly_budget") or 0),
-                        key=f"budget_{cat['id']}"
-                    )
-                with col2:
-                    is_fixed = st.checkbox(
-                        "Fixed",
-                        value=cat.get("is_fixed", False),
-                        key=f"fixed_{cat['id']}"
-                    )
+                new_budget = st.number_input(
+                    "Budget",
+                    value=float(cat.get("monthly_budget") or 0),
+                    key=f"budget_{cat['id']}"
+                )
                 col_update, col_delete = st.columns(2)
                 with col_update:
                     if st.button("Update", key=f"update_{cat['id']}"):
                         try:
                             st_conn.client.from_("categories").update({
-                                "monthly_budget": new_budget,
-                                "is_fixed": is_fixed
+                                "monthly_budget": new_budget
                             }).eq("id", cat["id"]).execute()
                             st.success("Updated")
                             st.cache_data.clear()
@@ -208,10 +197,6 @@ today = date.today()
 monthly_spending = get_monthly_spending(today.year, today.month, user.id)
 
 if categories_data:
-    # Separate fixed and variable categories
-    fixed_cats = [c for c in categories_data if c.get("is_fixed")]
-    variable_cats = [c for c in categories_data if not c.get("is_fixed")]
-
     # Calculate totals
     total_budget = sum(float(c.get("monthly_budget") or 0) for c in categories_data)
     total_spent = sum(monthly_spending.values())
@@ -227,67 +212,100 @@ if categories_data:
         delta_color = "normal" if total_remaining >= 0 else "inverse"
         st.metric("Remaining", f"{total_remaining:,.0f}₫", delta=f"{total_remaining:,.0f}₫", delta_color=delta_color)
 
-    # Variable expenses (envelopes)
-    if variable_cats:
-        st.write("**Variable Expenses**")
-        for cat in variable_cats:
-            budget = float(cat.get("monthly_budget") or 0)
-            spent = monthly_spending.get(cat["id"], 0)
-            remaining = budget - spent
+    # Category breakdown
+    for cat in categories_data:
+        budget = float(cat.get("monthly_budget") or 0)
+        spent = monthly_spending.get(cat["id"], 0)
 
-            if budget > 0:
-                progress = min(spent / budget, 1.0)
-                status = "🔴" if spent > budget else "🟡" if progress > 0.8 else "🟢"
-            else:
-                progress = 0
-                status = "⚪"
+        if budget > 0:
+            progress = min(spent / budget, 1.0)
+            status = "🔴" if spent > budget else "🟡" if progress > 0.8 else "🟢"
+        else:
+            progress = 0
+            status = "⚪"
 
-            col_name, col_bar, col_nums = st.columns([2, 4, 2])
-            with col_name:
-                st.write(f"{status} {cat['name']}")
-            with col_bar:
-                st.progress(progress)
-            with col_nums:
-                st.write(f"{spent:,.0f}₫ / {budget:,.0f}₫")
-
-    # Fixed expenses
-    if fixed_cats:
-        st.write("**Fixed Expenses**")
-        for cat in fixed_cats:
-            budget = float(cat.get("monthly_budget") or 0)
-            spent = monthly_spending.get(cat["id"], 0)
-
-            col_name, col_status, col_nums = st.columns([2, 4, 2])
-            with col_name:
-                st.write(f"📌 {cat['name']}")
-            with col_status:
-                if spent >= budget and budget > 0:
-                    st.write("✓ Paid")
-                elif spent > 0:
-                    st.write("Partial")
-                else:
-                    st.write("Pending")
-            with col_nums:
-                st.write(f"{spent:,.0f}₫ / {budget:,.0f}₫")
+        col_name, col_bar, col_nums = st.columns([2, 4, 2])
+        with col_name:
+            st.write(f"{status} {cat['name']}")
+        with col_bar:
+            st.progress(progress)
+        with col_nums:
+            st.write(f"{spent:,.0f}₫ / {budget:,.0f}₫")
 else:
     st.info("No categories configured. Add categories in Supabase to enable budget tracking.")
 
 st.divider()
 
-# NLP Expense Entry
-st.subheader("Quick Entry")
+# Smart Input
+st.subheader("What did you spend?")
 with st.form("expense_form"):
     expense_input = st.text_input(
-        "Enter expense",
-        placeholder="e.g., 200k for Annie toys, lunch 150k, coffee 50k yesterday"
+        "Type naturally",
+        placeholder="coffee 50k, lunch with Annie 200k, groceries 1.5M yesterday"
     )
-    submitted = st.form_submit_button("Parse")
+    st.caption("💡 You can also manage budgets: *add Dining 3M* · *set Groceries 5M* · *remove Travel*")
+    submitted = st.form_submit_button("Go")
 
 if submitted and expense_input:
     with st.spinner("Parsing..."):
         parsed = parse_expense(expense_input, model)
     if "error" not in parsed:
-        st.session_state["parsed_expense"] = parsed
+        if parsed.get("type") == "category":
+            st.session_state["parsed_category"] = parsed
+        else:
+            st.session_state["parsed_expense"] = parsed
+    else:
+        st.error(parsed["error"])
+
+# Handle category commands
+if "parsed_category" in st.session_state:
+    cat_cmd = st.session_state["parsed_category"]
+    action = cat_cmd.get("action")
+    name = cat_cmd.get("name")
+    budget = cat_cmd.get("budget", 0)
+
+    st.write(f"**Category Command:** {action.title()} '{name}'")
+    if budget:
+        st.write(f"**Budget:** {budget:,.0f}₫")
+
+    col_confirm, col_cancel = st.columns(2)
+    with col_confirm:
+        if st.button("Confirm", type="primary", key="confirm_cat"):
+            try:
+                if action == "add":
+                    st_conn.client.from_("categories").insert({
+                        "name": name,
+                        "monthly_budget": budget
+                    }).execute()
+                    st.success(f"Added category: {name}")
+                elif action == "update":
+                    st_conn.client.from_("categories").update({
+                        "monthly_budget": budget
+                    }).eq("name", name).execute()
+                    st.success(f"Updated {name} budget to {budget:,.0f}₫")
+                elif action == "remove":
+                    # Get category id first
+                    cat_result = st_conn.client.from_("categories").select("id").eq("name", name).execute()
+                    if cat_result.data:
+                        cat_id = cat_result.data[0]["id"]
+                        # Unlink transactions
+                        st_conn.client.from_("transactions").update({
+                            "category_id": None
+                        }).eq("category_id", cat_id).execute()
+                        # Delete category
+                        st_conn.client.from_("categories").delete().eq("id", cat_id).execute()
+                        st.success(f"Removed category: {name}")
+                    else:
+                        st.error(f"Category '{name}' not found")
+                del st.session_state["parsed_category"]
+                st.cache_data.clear()
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error: {e}")
+    with col_cancel:
+        if st.button("Cancel", key="cancel_cat"):
+            del st.session_state["parsed_category"]
+            st.rerun()
 
 # Show parsed result and save form
 if "parsed_expense" in st.session_state:
@@ -344,12 +362,6 @@ if "parsed_expense" in st.session_state:
     if cancel_clicked:
         del st.session_state["parsed_expense"]
         st.rerun()
-
-elif submitted and expense_input:
-    # Show error if parsing failed
-    parsed = parse_expense(expense_input, model)
-    if "error" in parsed:
-        st.error(parsed["error"])
 
 st.divider()
 
