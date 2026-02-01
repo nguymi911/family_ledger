@@ -31,7 +31,19 @@ Secrets are stored in `.streamlit/secrets.toml` (local) or Streamlit Cloud dashb
 [connections.supabase]
 url = "your_supabase_url"
 key = "your_supabase_publishable_key"
+
+[connections.gemini]
+api_key = "your_gemini_api_key"
+
+app_url = "http://localhost:8501"  # Update for production
 ```
+
+### Google OAuth Setup (Supabase)
+1. Go to Supabase Dashboard → Authentication → Providers
+2. Enable Google provider
+3. Add Google OAuth credentials (from Google Cloud Console)
+4. Add redirect URL: `https://your-project.supabase.co/auth/v1/callback`
+5. In Google Cloud Console, add authorized redirect URI
 
 Database schema changes should be made in `schema.sql` and executed in the Supabase SQL Editor.
 

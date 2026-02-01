@@ -4,6 +4,8 @@ from st_supabase_connection import SupabaseConnection
 from gemini_client import get_gemini_model
 from nlp_parser import parse_expense
 
+st.set_page_config(page_title="Family Ledger", page_icon="💰")
+
 # Initialize connection
 st_conn = st.connection(
     "supabase",
@@ -12,7 +14,60 @@ st_conn = st.connection(
     key=st.secrets["connections"]["supabase"]["key"],
 )
 
-# Initialize Gemini model
+# Authentication
+def get_user():
+    """Get current authenticated user from session."""
+    try:
+        session = st_conn.client.auth.get_session()
+        if session:
+            return session.user
+    except Exception:
+        pass
+    return None
+
+def login_with_google():
+    """Initiate Google OAuth login."""
+    try:
+        response = st_conn.client.auth.sign_in_with_oauth({
+            "provider": "google",
+            "options": {
+                "redirect_to": st.secrets.get("app_url", "http://localhost:8501")
+            }
+        })
+        if response.url:
+            st.markdown(f'<meta http-equiv="refresh" content="0;url={response.url}">', unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Login error: {e}")
+
+def logout():
+    """Sign out the current user."""
+    try:
+        st_conn.client.auth.sign_out()
+        st.rerun()
+    except Exception as e:
+        st.error(f"Logout error: {e}")
+
+# Check for OAuth callback
+query_params = st.query_params
+if "access_token" in query_params or "code" in query_params:
+    # Clear query params after OAuth callback
+    st.query_params.clear()
+    st.rerun()
+
+# Get current user
+user = get_user()
+
+# Login page
+if not user:
+    st.title("Annie Budget 💰")
+    st.write("Please sign in to continue.")
+
+    if st.button("Sign in with Google", type="primary"):
+        login_with_google()
+
+    st.stop()
+
+# Initialize Gemini model (only after auth)
 model = get_gemini_model()
 
 # Load categories with budget info
@@ -25,7 +80,7 @@ def get_category_map(categories_data):
     """Convert categories list to name->id map for dropdowns."""
     return {cat["name"]: cat["id"] for cat in categories_data}
 
-def get_monthly_spending(year: int, month: int):
+def get_monthly_spending(year: int, month: int, user_id: str):
     """Get spending totals by category for a given month."""
     start_date = f"{year}-{month:02d}-01"
     if month == 12:
@@ -35,7 +90,7 @@ def get_monthly_spending(year: int, month: int):
 
     result = st_conn.client.from_("transactions").select(
         "category_id, amount"
-    ).gte("date", start_date).lt("date", end_date).execute()
+    ).eq("user_id", user_id).gte("date", start_date).lt("date", end_date).execute()
 
     # Sum by category
     spending = {}
@@ -54,8 +109,13 @@ category_names = list(categories.keys()) if categories else [
 
 st.title("Family Ledger")
 
-# Sidebar - Category Management
+# Sidebar - User & Settings
 with st.sidebar:
+    st.write(f"**{user.email}**")
+    if st.button("Logout"):
+        logout()
+
+    st.divider()
     st.header("Settings")
 
     if st.button("🔄 Refresh Data"):
@@ -132,7 +192,7 @@ with st.sidebar:
 # Budget Burn-Down View
 st.subheader("Monthly Budget")
 today = date.today()
-monthly_spending = get_monthly_spending(today.year, today.month)
+monthly_spending = get_monthly_spending(today.year, today.month, user.id)
 
 if categories_data:
     # Separate fixed and variable categories
@@ -251,6 +311,7 @@ if "parsed_expense" in st.session_state:
 
         # Insert transaction
         transaction = {
+            "user_id": user.id,
             "amount": amount,
             "description": description,
             "is_annie_related": is_annie,
@@ -283,7 +344,7 @@ st.divider()
 st.subheader("Recent Transactions")
 rows = st_conn.client.from_("transactions").select(
     "*, categories(name)"
-).order("date", desc=True).limit(10).execute()
+).eq("user_id", user.id).order("date", desc=True).limit(10).execute()
 
 if rows.data:
     for row in rows.data:
