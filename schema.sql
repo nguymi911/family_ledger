@@ -16,7 +16,7 @@ CREATE TABLE public.categories (
 -- 3. Transactions: The Ledger
 CREATE TABLE public.transactions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id),
+  user_id UUID,
   category_id UUID REFERENCES public.categories(id),
   amount NUMERIC(15,2) NOT NULL,
   description TEXT,
