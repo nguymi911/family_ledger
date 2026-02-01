@@ -57,8 +57,9 @@ if "access_token" in query_params or "code" in query_params:
 # Get current user
 user = get_user()
 
-# Login page
-if not user:
+# Login page (if auth required)
+require_auth = st.secrets.get("require_auth", True)
+if require_auth and not user:
     st.title("Annie Budget 💰")
     st.write("Please sign in to continue.")
 
@@ -66,6 +67,14 @@ if not user:
         login_with_google()
 
     st.stop()
+
+# Mock user for when auth is disabled
+class MockUser:
+    id = "00000000-0000-0000-0000-000000000000"
+    email = "demo@example.com"
+
+if not user:
+    user = MockUser()
 
 # Initialize Gemini model (only after auth)
 model = get_gemini_model()
