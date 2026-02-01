@@ -31,7 +31,7 @@ def login_with_google():
         response = st_conn.client.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
-                "redirect_to": st.secrets.get("app_url", "http://localhost:8501")
+                "redirect_to": st.secrets["oauth"]["app_url"]
             }
         })
         if response.url:
