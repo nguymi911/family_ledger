@@ -58,7 +58,11 @@ if "access_token" in query_params or "code" in query_params:
 user = get_user()
 
 # Login page (if auth required)
-require_auth = st.secrets.get("require_auth", True)
+try:
+    require_auth = st.secrets["features"]["require_auth"]
+except KeyError:
+    require_auth = True
+
 if require_auth and not user:
     st.title("Annie Budget 💰")
     st.write("Please sign in to continue.")
