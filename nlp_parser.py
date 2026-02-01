@@ -30,16 +30,21 @@ For CATEGORY COMMANDS, return:
 
 Rules:
 1. For expenses: amount is required, infer category from context or use "Other"
-2. For categories: detect keywords like "add/create category", "set/update budget", "remove/delete category"
+2. For categories: detect keywords like "add/create", "set/update budget", "remove/delete" followed by a category name. The word "category" is optional.
 3. Convert k=thousand, M=million (e.g., "5M"=5000000, "500k"=500000)
+4. If input matches a category command pattern (add/remove/delete + name, or set/update + name + budget), treat it as a category command, NOT an expense.
 
 Respond ONLY with valid JSON, no markdown or explanation.
 
 Examples:
 - "200k for Annie toys" -> {"type": "expense", "amount": 200000, "description": "toys", "category": "Shopping", "is_annie_related": true, "date": null}
 - "add category Travel with budget 2M" -> {"type": "category", "action": "add", "name": "Travel", "budget": 2000000}
+- "add Dining 3M" -> {"type": "category", "action": "add", "name": "Dining", "budget": 3000000}
 - "set Groceries budget to 5M" -> {"type": "category", "action": "update", "name": "Groceries", "budget": 5000000}
+- "set Groceries 5M" -> {"type": "category", "action": "update", "name": "Groceries", "budget": 5000000}
 - "remove category Hobbies" -> {"type": "category", "action": "remove", "name": "Hobbies", "budget": null}
+- "remove Travel" -> {"type": "category", "action": "remove", "name": "Travel", "budget": null}
+- "delete Shopping" -> {"type": "category", "action": "remove", "name": "Shopping", "budget": null}
 """
 
 
