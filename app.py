@@ -4,7 +4,7 @@ from st_supabase_connection import SupabaseConnection
 from gemini_client import get_gemini_model
 from nlp_parser import parse_expense
 
-st.set_page_config(page_title="Family Ledger", page_icon="💰")
+st.set_page_config(page_title="Annie Budget", page_icon="💰")
 
 # Initialize connection
 st_conn = st.connection(
@@ -120,7 +120,7 @@ category_names = list(categories.keys()) if categories else [
     "Education", "Entertainment", "Shopping", "Hobbies", "Other"
 ]
 
-st.title("Family Ledger")
+st.title("Annie Budget")
 
 # Sidebar - User & Settings
 with st.sidebar:
