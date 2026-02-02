@@ -73,7 +73,10 @@ def parse_input(user_input: str, model=None, categories: list = None) -> dict:
     prompt = f"{SYSTEM_PROMPT}{category_hint}\n\nToday's date is {today}.\n\nParse this: {user_input}"
 
     try:
-        response = model.generate_content(prompt)
+        response = model.generate_content(
+            prompt,
+            request_options={"timeout": 30}
+        )
         response_text = response.text.strip()
 
         # Clean up response (remove markdown code blocks if present)
