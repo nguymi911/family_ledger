@@ -48,7 +48,7 @@ Examples:
 """
 
 
-def parse_input(user_input: str, model=None) -> dict:
+def parse_input(user_input: str, model=None, categories: list = None) -> dict:
     """
     Parse natural language input into either expense or category command.
 
@@ -64,7 +64,13 @@ def parse_input(user_input: str, model=None) -> dict:
         model = get_gemini_model()
 
     today = date.today().isoformat()
-    prompt = f"{SYSTEM_PROMPT}\n\nToday's date is {today}.\n\nParse this: {user_input}"
+
+    # Build prompt with available categories if provided
+    category_hint = ""
+    if categories:
+        category_hint = f"\n\nAvailable categories: {', '.join(categories)}. Use one of these for expenses, or 'Other' if none fit."
+
+    prompt = f"{SYSTEM_PROMPT}{category_hint}\n\nToday's date is {today}.\n\nParse this: {user_input}"
 
     try:
         response = model.generate_content(prompt)
@@ -129,12 +135,12 @@ def _normalize_category_command(parsed: dict) -> dict:
     return result
 
 
-def parse_expense(user_input: str, model=None) -> dict:
+def parse_expense(user_input: str, model=None, categories: list = None) -> dict:
     """
     Parse natural language expense input into structured transaction data.
     Wrapper for backward compatibility - calls parse_input and filters for expenses.
     """
-    result = parse_input(user_input, model)
+    result = parse_input(user_input, model, categories)
     if result.get("type") == "category":
         # Return as-is so app.py can handle it
         return result

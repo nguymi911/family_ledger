@@ -248,7 +248,7 @@ with st.form("expense_form"):
 
 if submitted and expense_input:
     with st.spinner("Parsing..."):
-        parsed = parse_expense(expense_input, model)
+        parsed = parse_expense(expense_input, model, category_names)
     if "error" not in parsed:
         if parsed.get("type") == "category":
             st.session_state["parsed_category"] = parsed
