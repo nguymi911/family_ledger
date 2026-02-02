@@ -4,61 +4,18 @@ from datetime import date
 from typing import Optional
 from gemini_client import get_gemini_model
 
-SYSTEM_PROMPT = """You are a financial assistant for a family expense tracker.
+SYSTEM_PROMPT = """Parse input as JSON. k=thousand, M=million.
 
-First, determine if the input is:
-1. An EXPENSE entry (contains amount/spending info)
-2. A CATEGORY COMMAND (add/update/remove category)
+EXPENSE: {"type":"expense","amount":NUMBER,"description":"TEXT","category":"NAME","is_annie_related":BOOL,"date":"YYYY-MM-DD or null"}
+CATEGORY CMD: {"type":"category","action":"add|update|remove","name":"NAME","budget":NUMBER or null}
 
-For EXPENSE entries, return:
-{
-  "type": "expense",
-  "amount": numeric value (convert k=thousand, M=million, e.g., "200k"=200000, "1.5M"=1500000),
-  "description": brief description,
-  "category": category name,
-  "is_annie_related": true if mentions "Annie"/baby/daughter/child,
-  "date": ISO format or null
-}
-
-For CATEGORY COMMANDS, return:
-{
-  "type": "category",
-  "action": "add" | "update" | "remove",
-  "name": category name,
-  "budget": numeric value (for add/update, convert k/M notation)
-}
-
-Rules:
-1. For expenses: amount is required, infer category from context or use "Other"
-2. For categories: detect keywords like "add/create", "set/update budget", "remove/delete" followed by a category name. The word "category" is optional.
-3. Convert k=thousand, M=million (e.g., "5M"=5000000, "500k"=500000)
-4. If input matches a category command pattern (add/remove/delete + name, or set/update + name + budget), treat it as a category command, NOT an expense.
-
-Respond ONLY with valid JSON, no markdown or explanation.
-
-Examples:
-- "200k for Annie toys" -> {"type": "expense", "amount": 200000, "description": "toys", "category": "Shopping", "is_annie_related": true, "date": null}
-- "add category Travel with budget 2M" -> {"type": "category", "action": "add", "name": "Travel", "budget": 2000000}
-- "add Dining 3M" -> {"type": "category", "action": "add", "name": "Dining", "budget": 3000000}
-- "set Groceries budget to 5M" -> {"type": "category", "action": "update", "name": "Groceries", "budget": 5000000}
-- "set Groceries 5M" -> {"type": "category", "action": "update", "name": "Groceries", "budget": 5000000}
-- "remove category Hobbies" -> {"type": "category", "action": "remove", "name": "Hobbies", "budget": null}
-- "remove Travel" -> {"type": "category", "action": "remove", "name": "Travel", "budget": null}
-- "delete Shopping" -> {"type": "category", "action": "remove", "name": "Shopping", "budget": null}
+Rules: "add/set X 5M"=category cmd. "coffee 50k"=expense. Annie/baby/child=is_annie_related:true.
 """
 
 
 def parse_input(user_input: str, model=None, categories: list = None) -> dict:
     """
     Parse natural language input into either expense or category command.
-
-    Args:
-        user_input: Natural language string
-        model: Optional Gemini model instance
-
-    Returns:
-        dict with 'type' key ('expense' or 'category') and relevant fields
-        Returns error dict if parsing fails
     """
     if model is None:
         model = get_gemini_model()
