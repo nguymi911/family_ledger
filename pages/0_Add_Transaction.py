@@ -22,4 +22,4 @@ render_smart_input(client, user, model, categories, category_names)
 
 st.divider()
 
-render_budget(client, user, categories_data)
+render_budget(client, categories_data)

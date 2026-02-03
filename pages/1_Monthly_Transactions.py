@@ -33,8 +33,8 @@ with col3:
     category_names = ["All"] + list(categories.keys())
     selected_category = st.selectbox("Category", options=category_names, index=0)
 
-# Fetch transactions
-result = get_monthly_transactions(client, user.id, selected_year, selected_month)
+# Fetch transactions (all users in household)
+result = get_monthly_transactions(client, selected_year, selected_month)
 transactions = result.data
 
 # Filter by category if selected
@@ -54,9 +54,12 @@ if transactions:
     # Display transactions
     for tx in transactions:
         cat_name = tx.get("categories", {}).get("name", "—") if tx.get("categories") else "—"
+        user_name = tx.get("profiles", {}).get("display_name", "—") if tx.get("profiles") else "—"
         annie_tag = " 👶" if tx.get("is_annie_related") else ""
 
-        col_date, col_desc, col_amount, col_cat, col_edit, col_del = st.columns([2, 3, 2, 2, 1, 1])
+        col_user, col_date, col_desc, col_amount, col_cat, col_edit, col_del = st.columns([2, 2, 3, 2, 2, 1, 1])
+        with col_user:
+            st.write(user_name)
         with col_date:
             st.write(tx["date"])
         with col_desc:

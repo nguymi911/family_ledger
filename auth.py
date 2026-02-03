@@ -1,4 +1,5 @@
 import streamlit as st
+import database as db
 
 
 class MockUser:
@@ -18,7 +19,7 @@ def get_user(client):
     return None
 
 
-def sign_up(client, email, password):
+def sign_up(client, email, password, display_name):
     """Register a new user with email and password."""
     try:
         response = client.auth.sign_up({"email": email, "password": password})
@@ -26,6 +27,8 @@ def sign_up(client, email, password):
             if response.user.identities and len(response.user.identities) == 0:
                 st.error("This email is already registered. Please sign in.")
             else:
+                # Store display name in session for profile creation after email confirmation
+                st.session_state["pending_display_name"] = display_name
                 st.success("Check your email for a confirmation link.")
         return response
     except Exception as e:
@@ -80,19 +83,22 @@ def require_login(client):
 
         with tab_signup:
             with st.form("signup_form"):
+                display_name = st.text_input("Your Name", key="signup_name")
                 email = st.text_input("Email", key="signup_email")
                 password = st.text_input("Password", type="password", key="signup_password")
                 password_confirm = st.text_input("Confirm Password", type="password", key="signup_password_confirm")
                 submitted = st.form_submit_button("Sign Up", type="primary")
                 if submitted:
-                    if not email or not password:
+                    if not display_name:
+                        st.error("Name is required.")
+                    elif not email or not password:
                         st.error("Email and password are required.")
                     elif password != password_confirm:
                         st.error("Passwords do not match.")
                     elif len(password) < 6:
                         st.error("Password must be at least 6 characters.")
                     else:
-                        sign_up(client, email, password)
+                        sign_up(client, email, password, display_name)
 
         st.stop()
 

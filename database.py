@@ -34,8 +34,8 @@ def get_category_names(categories_data):
     return list(get_category_map(categories_data).keys())
 
 
-def get_monthly_spending(client, year: int, month: int, user_id: str):
-    """Get spending totals by category for a given month."""
+def get_monthly_spending(client, year: int, month: int):
+    """Get spending totals by category for a given month (all users)."""
     start_date = f"{year}-{month:02d}-01"
     if month == 12:
         end_date = f"{year + 1}-01-01"
@@ -44,7 +44,7 @@ def get_monthly_spending(client, year: int, month: int, user_id: str):
 
     result = client.from_("transactions").select(
         "category_id, amount"
-    ).eq("user_id", user_id).gte("date", start_date).lt("date", end_date).execute()
+    ).gte("date", start_date).lt("date", end_date).execute()
 
     spending = {}
     for tx in result.data:
@@ -100,8 +100,8 @@ def get_recent_transactions(client, user_id: str, limit: int = 10):
     ).eq("user_id", user_id).order("date", desc=True).limit(limit).execute()
 
 
-def get_monthly_transactions(client, user_id: str, year: int, month: int):
-    """Get all transactions for a specific month."""
+def get_monthly_transactions(client, year: int, month: int):
+    """Get all transactions for a specific month (all users)."""
     start_date = f"{year}-{month:02d}-01"
     if month == 12:
         end_date = f"{year + 1}-01-01"
@@ -109,8 +109,8 @@ def get_monthly_transactions(client, user_id: str, year: int, month: int):
         end_date = f"{year}-{month + 1:02d}-01"
 
     return client.from_("transactions").select(
-        "*, categories(name)"
-    ).eq("user_id", user_id).gte("date", start_date).lt("date", end_date).order("date", desc=True).execute()
+        "*, categories(name), profiles(display_name)"
+    ).gte("date", start_date).lt("date", end_date).order("date", desc=True).execute()
 
 
 def add_transaction(client, user_id: str, amount: float, description: str,
@@ -144,3 +144,25 @@ def update_transaction(client, tx_id: str, amount: float, description: str,
 def delete_transaction(client, tx_id: str):
     """Delete a transaction."""
     client.from_("transactions").delete().eq("id", tx_id).execute()
+
+
+# Profile functions
+def get_profile(client, user_id: str):
+    """Get user profile by user_id."""
+    result = client.from_("profiles").select("*").eq("id", user_id).execute()
+    return result.data[0] if result.data else None
+
+
+def create_profile(client, user_id: str, display_name: str):
+    """Create a new user profile."""
+    client.from_("profiles").insert({
+        "id": user_id,
+        "display_name": display_name
+    }).execute()
+
+
+def update_profile(client, user_id: str, display_name: str):
+    """Update user profile."""
+    client.from_("profiles").update({
+        "display_name": display_name
+    }).eq("id", user_id).execute()

@@ -3,11 +3,11 @@ from datetime import date
 import database as db
 
 
-def render_budget(client, user, categories_data):
+def render_budget(client, categories_data):
     """Render the budget burn-down view."""
     st.subheader("Monthly Budget")
     today = date.today()
-    monthly_spending = db.get_monthly_spending(client, today.year, today.month, user.id)
+    monthly_spending = db.get_monthly_spending(client, today.year, today.month)
 
     if categories_data:
         # Calculate totals
