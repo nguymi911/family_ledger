@@ -14,8 +14,8 @@ def get_connection():
 
 @st.cache_data(ttl=300)
 def load_categories(_client):
-    """Load all categories with budget info."""
-    result = _client.from_("categories").select("id, name, monthly_budget").execute()
+    """Load all categories with budget info, sorted by budget descending."""
+    result = _client.from_("categories").select("id, name, monthly_budget").order("monthly_budget", desc=True).execute()
     return result.data
 
 
