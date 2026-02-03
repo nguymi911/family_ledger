@@ -20,7 +20,12 @@ A private, mindful, and collaborative financial tool designed for a dual-income 
 * **Natural Language Input:** A single text field that uses AI to parse strings like "200k for Annie toys" into structured data.
 * **The "Annie" Toggle:** A global flag/tag to track the "Total Cost of Annie" across all categories (Health, Education, Food).
 
-### C. Mortgage Dashboard
+### C. Transaction History
+* **Monthly View:** Dedicated page to view all transactions for a selected month with totals.
+* **Category Filter:** Filter monthly transactions by category to analyze spending patterns.
+* **Recent Transactions:** Quick view of recent entries on the main dashboard with edit/delete capabilities.
+
+### D. Mortgage Dashboard
 * **Visual Debt-Free Clock:** A countdown and progress bar showing the remaining loan term.
 * **Extra Repayment Simulator:** Real-time calculation of interest saved and months shaved off based on "leftover" monthly budget.
 
@@ -33,3 +38,4 @@ A private, mindful, and collaborative financial tool designed for a dual-income 
 | 03 | Parents | As parents, Happy and I want to compare our actual spending against our pre-allocated monthly budget so we can make informed decisions for our family. |
 | 04 | Homeowner | As a homeowner in Green Valley, I want to see how an extra repayment reduces my loan term so that I feel motivated to save. |
 | 05 | Couple | As a couple, Happy and I want to see each other's entries in real-time so that we don't lose track of our shared "envelope." |
+| 06 | Parent | As a parent, I want to view all transactions for a specific month so that I can review our spending history and identify patterns. |

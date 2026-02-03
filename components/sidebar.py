@@ -1,16 +1,10 @@
 import streamlit as st
-from auth import logout
 import database as db
 
 
 def render_sidebar(client, user, categories_data):
-    """Render the sidebar with user info and category management."""
+    """Render the sidebar with category management."""
     with st.sidebar:
-        st.write(f"**{user.email}**")
-        if st.button("Logout"):
-            logout(client)
-
-        st.divider()
         st.header("Settings")
 
         if st.button("🔄 Refresh Data"):

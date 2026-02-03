@@ -6,7 +6,7 @@ Annie Budget is a private, web-based financial tracking application designed for
 ### Tech Stack
 * **Frontend:** Streamlit (Python 3.11+)
 * **Backend/BaaS:** Supabase (PostgreSQL, Auth)
-* **AI Engine:** Gemini 1.5 Flash (via API)
+* **AI Engine:** Gemini 2.0 Flash Lite (via API)
 * **Deployment:** Streamlit Community Cloud (via Private GitHub Repository)
 
 ## 2. Database Schema (PostgreSQL)
@@ -52,28 +52,30 @@ CREATE TABLE public.mortgage_config (
 
 ## 3. Implementation Roadmap
 
-### Phase 1: Infrastructure & Data
-* **Task 1.1: Environment Provisioning**
+### Phase 1: Infrastructure & Data ✅
+* **Task 1.1: Environment Provisioning** ✅
     * Setup Supabase project, GitHub repo, and Streamlit Cloud account.
-* **Task 1.2: Database Schema Execution**
+* **Task 1.2: Database Schema Execution** ✅
     * Run the SQL DDL above in the Supabase SQL Editor.
-* **Task 1.3: Supabase Auth & Connection**
-    * Secure login and implement the DB handshake using st-supabase-connection.
+* **Task 1.3: Supabase Auth & Connection** ✅
+    * Email/password authentication using Supabase Auth.
 
-### Phase 2: The "Smart Entry" Engine
-* **Task 2.1: Gemini API Integration**
-    * Obtain API key and connect to Gemini 1.5 Flash.
-* **Task 2.2: The NLP Parser Logic**
-    * Prompt engineering for M/k currency notation and "Annie" toggle detection.
-* **Task 2.3: Transaction Commit Logic**
-    * UI button to save parsed JSON objects into the Transactions table.
+### Phase 2: The "Smart Entry" Engine ✅
+* **Task 2.1: Gemini API Integration** ✅
+    * Connect to Gemini 2.0 Flash Lite with optimized settings.
+* **Task 2.2: The NLP Parser Logic** ✅
+    * Prompt engineering for M/k currency notation, "Annie" toggle detection, and category commands.
+* **Task 2.3: Transaction Commit Logic** ✅
+    * Form-based submission to save parsed data into the Transactions table.
 
 ### Phase 3: Dashboards & Insights
-* **Task 3.1: Budget Burn-Down View**
+* **Task 3.1: Budget Burn-Down View** ✅
     * Visualizing monthly spent vs. budget via progress bars.
-* **Task 3.2: The "Annie" Expense Report**
+* **Task 3.2: Monthly Transactions Page** ✅
+    * Multi-page app with dedicated view for all transactions in a selected month.
+* **Task 3.3: The "Annie" Expense Report**
     * Filtered metric cards for child-specific costs.
-* **Task 3.3: Mortgage "Freedom Clock"**
+* **Task 3.4: Mortgage "Freedom Clock"**
     * Amortization logic to show updated debt-free date and months saved.
 
 ## 4. Operational Requirements

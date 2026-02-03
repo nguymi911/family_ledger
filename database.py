@@ -100,6 +100,19 @@ def get_recent_transactions(client, user_id: str, limit: int = 10):
     ).eq("user_id", user_id).order("date", desc=True).limit(limit).execute()
 
 
+def get_monthly_transactions(client, user_id: str, year: int, month: int):
+    """Get all transactions for a specific month."""
+    start_date = f"{year}-{month:02d}-01"
+    if month == 12:
+        end_date = f"{year + 1}-01-01"
+    else:
+        end_date = f"{year}-{month + 1:02d}-01"
+
+    return client.from_("transactions").select(
+        "*, categories(name)"
+    ).eq("user_id", user_id).gte("date", start_date).lt("date", end_date).order("date", desc=True).execute()
+
+
 def add_transaction(client, user_id: str, amount: float, description: str,
                     category_id: str, tx_date: str, is_annie_related: bool):
     """Add a new transaction."""

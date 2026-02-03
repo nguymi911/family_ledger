@@ -1,38 +1,30 @@
 import streamlit as st
-from gemini_client import get_gemini_model
-from database import get_connection, load_categories, get_category_map, get_category_names
-from auth import require_login
-from components import render_sidebar, render_budget, render_smart_input, render_transactions
+from database import get_connection
+from auth import require_login, logout
 
-# Page config
 st.set_page_config(page_title="Annie Budget", page_icon="💰")
 
-# Initialize connections
+# Initialize connection and authenticate
 conn = get_connection()
 client = conn.client
-
-# Authentication
 user = require_login(client)
 
-# Initialize Gemini model
-model = get_gemini_model()
+# Store in session state for pages to access
+st.session_state["client"] = client
+st.session_state["user"] = user
 
-# Load data
-categories_data = load_categories(client)
-categories = get_category_map(categories_data)
-category_names = get_category_names(categories_data)
+# User info in sidebar (visible on all pages)
+with st.sidebar:
+    st.write(f"**{user.email}**")
+    if st.button("Logout"):
+        logout(client)
+    st.divider()
 
-# Layout
-st.title("Annie Budget")
+# Navigation
+pages = [
+    st.Page("pages/0_Add_Transaction.py", title="Add Transaction", icon="➕"),
+    st.Page("pages/1_Monthly_Transactions.py", title="Monthly Transactions", icon="📅"),
+]
 
-render_sidebar(client, user, categories_data)
-
-render_budget(client, user, categories_data)
-
-st.divider()
-
-render_smart_input(client, user, model, categories, category_names)
-
-st.divider()
-
-render_transactions(client, user, categories, category_names)
+nav = st.navigation(pages)
+nav.run()
