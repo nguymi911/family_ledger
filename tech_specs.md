@@ -72,10 +72,12 @@ CREATE TABLE public.mortgage_config (
 * **Task 3.1: Budget Burn-Down View** ✅
     * Visualizing monthly spent vs. budget via progress bars.
 * **Task 3.2: Monthly Transactions Page** ✅
-    * Multi-page app with dedicated view for all transactions in a selected month.
-* **Task 3.3: The "Annie" Expense Report**
+    * Multi-page app with dedicated view for all transactions in a selected month with category filter and edit/delete capabilities.
+* **Task 3.3: Category Management Page** ✅
+    * Dedicated page to add, edit, and delete budget categories.
+* **Task 3.4: The "Annie" Expense Report**
     * Filtered metric cards for child-specific costs.
-* **Task 3.4: Mortgage "Freedom Clock"**
+* **Task 3.5: Mortgage "Freedom Clock"**
     * Amortization logic to show updated debt-free date and months saved.
 
 ## 4. Operational Requirements

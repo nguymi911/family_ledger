@@ -21,9 +21,8 @@ A private, mindful, and collaborative financial tool designed for a dual-income 
 * **The "Annie" Toggle:** A global flag/tag to track the "Total Cost of Annie" across all categories (Health, Education, Food).
 
 ### C. Transaction History
-* **Monthly View:** Dedicated page to view all transactions for a selected month with totals.
+* **Monthly View:** Dedicated page to view all transactions for a selected month with totals and edit/delete capabilities.
 * **Category Filter:** Filter monthly transactions by category to analyze spending patterns.
-* **Recent Transactions:** Quick view of recent entries on the main dashboard with edit/delete capabilities.
 
 ### D. Mortgage Dashboard
 * **Visual Debt-Free Clock:** A countdown and progress bar showing the remaining loan term.

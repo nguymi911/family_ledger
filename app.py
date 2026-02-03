@@ -24,6 +24,7 @@ with st.sidebar:
 pages = [
     st.Page("pages/0_Add_Transaction.py", title="Add Transaction", icon="➕"),
     st.Page("pages/1_Monthly_Transactions.py", title="Monthly Transactions", icon="📅"),
+    st.Page("pages/2_Manage_Categories.py", title="Manage Categories", icon="⚙️"),
 ]
 
 nav = st.navigation(pages)
