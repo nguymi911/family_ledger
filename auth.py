@@ -28,22 +28,23 @@ def get_user(client):
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
 
     # Try to restore from cookies
-    # First call getAll() to ensure cookies are loaded (handles timing issue)
+    # The cookie component needs multiple reruns to initialize on page load
+    max_cookie_retries = 3
+    retry_count = st.session_state.get("_cookies_retry_count", 0)
+
     all_cookies = controller.getAll()
 
-    # If cookies haven't loaded yet (returns None on first run), trigger a rerun
+    # If cookies haven't loaded yet (returns None), retry up to max_cookie_retries times
     if all_cookies is None:
-        # Mark that we're waiting for cookies to prevent infinite loops
-        if "_cookies_loading" not in st.session_state:
-            st.session_state["_cookies_loading"] = True
+        if retry_count < max_cookie_retries:
+            st.session_state["_cookies_retry_count"] = retry_count + 1
             st.rerun()
-        # If we already tried once and still None, cookies are truly empty
-        del st.session_state["_cookies_loading"]
+        # Exhausted retries, cookies are truly unavailable
+        st.session_state["_cookies_retry_count"] = 0
         return None
 
-    # Clear the loading flag if it exists
-    if "_cookies_loading" in st.session_state:
-        del st.session_state["_cookies_loading"]
+    # Cookies loaded successfully, reset retry counter
+    st.session_state["_cookies_retry_count"] = 0
 
     user_id = controller.get("auth_user_id")
     user_email = controller.get("auth_user_email")
