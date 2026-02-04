@@ -81,9 +81,6 @@ def require_login(client):
     except KeyError:
         require_auth = True
 
-    # Store auth requirement in session for profile check
-    st.session_state["require_auth"] = require_auth
-
     if require_auth and not user:
         # Hide sidebar on login page
         st.markdown("""
