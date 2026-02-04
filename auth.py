@@ -1,5 +1,5 @@
 import streamlit as st
-import extra_streamlit_components as stx
+from streamlit_cookies_controller import CookieController
 
 
 class MockUser:
@@ -15,21 +15,17 @@ class SessionUser:
         self.email = email
 
 
-def get_cookie_manager():
-    """Get cookie manager instance."""
-    return stx.CookieManager()
-
-
 def get_user(client):
     """Get current authenticated user from cookies or session."""
+    controller = CookieController()
+
     # Check session state first (faster)
     if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
 
     # Try to restore from cookies
-    cookie_manager = get_cookie_manager()
-    user_id = cookie_manager.get("auth_user_id")
-    user_email = cookie_manager.get("auth_user_email")
+    user_id = controller.get("auth_user_id")
+    user_email = controller.get("auth_user_email")
 
     if user_id and user_email:
         # Restore to session state
@@ -59,6 +55,7 @@ def sign_up(client, email, password, display_name):
 
 def sign_in(client, email, password):
     """Sign in with email and password."""
+    controller = CookieController()
     try:
         response = client.auth.sign_in_with_password({"email": email, "password": password})
         if response.user:
@@ -66,10 +63,9 @@ def sign_in(client, email, password):
             st.session_state["auth_user_id"] = response.user.id
             st.session_state["auth_user_email"] = response.user.email
 
-            # Persist to cookies (expires in 30 days)
-            cookie_manager = get_cookie_manager()
-            cookie_manager.set("auth_user_id", response.user.id, max_age=30*24*60*60)
-            cookie_manager.set("auth_user_email", response.user.email, max_age=30*24*60*60)
+            # Persist to cookies
+            controller.set("auth_user_id", response.user.id)
+            controller.set("auth_user_email", response.user.email)
 
             st.rerun()
         return response
@@ -80,6 +76,7 @@ def sign_in(client, email, password):
 
 def logout(client):
     """Sign out the current user."""
+    controller = CookieController()
     try:
         # Clear session state
         if "auth_user_id" in st.session_state:
@@ -90,9 +87,8 @@ def logout(client):
             del st.session_state["profile"]
 
         # Clear cookies
-        cookie_manager = get_cookie_manager()
-        cookie_manager.delete("auth_user_id")
-        cookie_manager.delete("auth_user_email")
+        controller.remove("auth_user_id")
+        controller.remove("auth_user_email")
 
         client.auth.sign_out()
         st.rerun()
