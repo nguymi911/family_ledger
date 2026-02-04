@@ -82,6 +82,14 @@ def require_login(client):
         require_auth = True
 
     if require_auth and not user:
+        # Hide sidebar on login page
+        st.markdown("""
+            <style>
+                [data-testid="stSidebar"] { display: none; }
+                [data-testid="stSidebarNav"] { display: none; }
+            </style>
+        """, unsafe_allow_html=True)
+
         st.title("Annie Budget")
         st.write("Please sign in to continue.")
 
