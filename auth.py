@@ -2,12 +2,6 @@ import streamlit as st
 from streamlit_cookies_controller import CookieController
 
 
-class MockUser:
-    """Mock user for when auth is disabled."""
-    id = "00000000-0000-0000-0000-000000000000"
-    email = "demo@example.com"
-
-
 class SessionUser:
     """User object constructed from session state."""
     def __init__(self, user_id, email):
@@ -97,16 +91,10 @@ def logout(client):
 
 
 def require_login(client):
-    """Check auth and show login page if needed. Returns user or None."""
+    """Check auth and show login page if needed. Returns user or stops."""
     user = get_user(client)
 
-    # Check if auth is required
-    try:
-        require_auth = st.secrets["features"]["require_auth"]
-    except KeyError:
-        require_auth = True
-
-    if require_auth and not user:
+    if not user:
         # Hide sidebar on login page
         st.markdown("""
             <style>
@@ -148,9 +136,5 @@ def require_login(client):
                         sign_up(client, email, password, display_name)
 
         st.stop()
-
-    # Return mock user if auth disabled
-    if not user:
-        user = MockUser()
 
     return user
