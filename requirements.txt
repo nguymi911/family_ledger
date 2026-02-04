@@ -2,4 +2,3 @@ streamlit
 st-supabase-connection
 gotrue
 google-generativeai
-streamlit-cookies-controller
