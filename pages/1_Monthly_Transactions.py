@@ -20,14 +20,16 @@ profiles_map = {p["id"]: p["display_name"] for p in profiles_data} if profiles_d
 
 st.title("Monthly Transactions")
 
-# Filters: Year, Month, Category, User
-col1, col2, col3, col4 = st.columns(4)
+# Filters: Year, Month, Category, User (2x2 grid for mobile)
+col1, col2 = st.columns(2)
 with col1:
     selected_year = st.selectbox(
         "Year",
         options=range(date.today().year, date.today().year - 5, -1),
         index=0
     )
+    category_names = ["All"] + list(categories.keys())
+    selected_category = st.selectbox("Category", options=category_names, index=0)
 with col2:
     selected_month = st.selectbox(
         "Month",
@@ -35,10 +37,6 @@ with col2:
         format_func=lambda m: date(2000, m, 1).strftime("%B"),
         index=date.today().month - 1
     )
-with col3:
-    category_names = ["All"] + list(categories.keys())
-    selected_category = st.selectbox("Category", options=category_names, index=0)
-with col4:
     user_names = ["All"] + [p["display_name"] for p in profiles_data] if profiles_data else ["All"]
     selected_user = st.selectbox("User", options=user_names, index=0)
 
@@ -67,51 +65,32 @@ if transactions:
 
     st.divider()
 
-    # Column headers
-    col_user, col_date, col_desc, col_amount, col_cat, col_edit, col_del = st.columns([2, 2, 3, 2, 2, 1, 1])
-    with col_user:
-        st.write("**User**")
-    with col_date:
-        st.write("**Date**")
-    with col_desc:
-        st.write("**Description**")
-    with col_amount:
-        st.write("**Amount**")
-    with col_cat:
-        st.write("**Category**")
-    with col_edit:
-        st.write("")
-    with col_del:
-        st.write("")
-
-    # Display transactions
+    # Display transactions (mobile-optimized)
     for tx in transactions:
         cat_name = tx.get("categories", {}).get("name", "—") if tx.get("categories") else "—"
         user_name = tx.get("profiles", {}).get("display_name", "—") if tx.get("profiles") else "—"
         annie_tag = " 👶" if tx.get("is_annie_related") else ""
+        tx_date = tx["date"][5:] if tx.get("date") else "—"  # Show MM-DD only
 
-        col_user, col_date, col_desc, col_amount, col_cat, col_edit, col_del = st.columns([2, 2, 3, 2, 2, 1, 1])
-        with col_user:
-            st.write(user_name)
-        with col_date:
-            st.write(tx["date"])
-        with col_desc:
-            st.write(f"{tx['description']}{annie_tag}")
+        col_info, col_amount, col_actions = st.columns([5, 2, 1])
+        with col_info:
+            st.write(f"**{tx['description']}**{annie_tag}")
+            st.caption(f"{user_name} · {tx_date} · {cat_name}")
         with col_amount:
-            st.write(f"{tx['amount']:,.0f}₫")
-        with col_cat:
-            st.write(cat_name)
-        with col_edit:
-            if st.button("✏️", key=f"edit_tx_{tx['id']}"):
-                st.session_state["edit_transaction"] = tx
-                st.rerun()
-        with col_del:
-            if st.button("🗑️", key=f"del_tx_{tx['id']}"):
-                try:
-                    db.delete_transaction(client, tx["id"])
+            st.write(f"**{tx['amount']:,.0f}₫**")
+        with col_actions:
+            col_edit, col_del = st.columns(2)
+            with col_edit:
+                if st.button("✏️", key=f"edit_tx_{tx['id']}"):
+                    st.session_state["edit_transaction"] = tx
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Error: {e}")
+            with col_del:
+                if st.button("🗑️", key=f"del_tx_{tx['id']}"):
+                    try:
+                        db.delete_transaction(client, tx["id"])
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
 else:
     st.info(f"No transactions for {date(selected_year, selected_month, 1).strftime('%B %Y')}")
 
