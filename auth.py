@@ -15,7 +15,6 @@ class SessionUser:
         self.email = email
 
 
-@st.cache_resource(experimental_allow_widgets=True)
 def get_cookie_manager():
     """Get cookie manager instance."""
     return stx.CookieManager()
