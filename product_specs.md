@@ -23,6 +23,8 @@ A private, mindful, and collaborative financial tool designed for a dual-income 
 ### C. Transaction History
 * **Monthly View:** Dedicated page to view all transactions for a selected month with totals and edit/delete capabilities.
 * **Category Filter:** Filter monthly transactions by category to analyze spending patterns.
+* **User Filter:** Filter transactions by household member to see individual spending.
+* **User Attribution:** Each transaction displays the name of the user who created it.
 
 ### D. Mortgage Dashboard
 * **Visual Debt-Free Clock:** A countdown and progress bar showing the remaining loan term.
