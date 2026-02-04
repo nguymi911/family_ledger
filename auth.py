@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import urllib.parse
 
 
@@ -16,58 +15,19 @@ class SessionUser:
         self.email = email
 
 
-def set_cookie(name, value, days=30):
-    """Set a cookie using JavaScript."""
-    expires = f"max-age={days * 24 * 60 * 60}"
-    js = f"""
-    <script>
-        document.cookie = "{name}={value}; {expires}; path=/; SameSite=Lax";
-    </script>
-    """
-    components.html(js, height=0)
-
-
-def delete_cookie(name):
-    """Delete a cookie using JavaScript."""
-    js = f"""
-    <script>
-        document.cookie = "{name}=; max-age=0; path=/; SameSite=Lax";
-    </script>
-    """
-    components.html(js, height=0)
-
-
-def get_cookies_from_header():
-    """Get cookies from the request header."""
-    try:
-        from streamlit.web.server.websocket_headers import _get_websocket_headers
-        headers = _get_websocket_headers()
-        if headers and "Cookie" in headers:
-            cookie_str = headers["Cookie"]
-            cookies = {}
-            for item in cookie_str.split(";"):
-                if "=" in item:
-                    key, value = item.strip().split("=", 1)
-                    cookies[key] = value
-            return cookies
-    except Exception:
-        pass
-    return {}
-
-
 def get_user(client):
-    """Get current authenticated user from cookies or session."""
+    """Get current authenticated user from query params or session."""
     # Check session state first (faster)
     if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
 
-    # Try to restore from cookies
-    cookies = get_cookies_from_header()
-    user_id = cookies.get("auth_user_id")
-    user_email = cookies.get("auth_user_email")
+    # Try to restore from query params
+    params = st.query_params
+    user_id = params.get("uid")
+    user_email = params.get("email")
 
     if user_id and user_email:
-        # URL decode the values
+        # URL decode the email
         user_email = urllib.parse.unquote(user_email)
         # Restore to session state
         st.session_state["auth_user_id"] = user_id
@@ -103,9 +63,9 @@ def sign_in(client, email, password):
             st.session_state["auth_user_id"] = response.user.id
             st.session_state["auth_user_email"] = response.user.email
 
-            # Persist to cookies via JavaScript
-            set_cookie("auth_user_id", response.user.id)
-            set_cookie("auth_user_email", urllib.parse.quote(response.user.email))
+            # Persist to URL query params
+            st.query_params["uid"] = response.user.id
+            st.query_params["email"] = urllib.parse.quote(response.user.email)
 
             st.rerun()
         return response
@@ -125,9 +85,8 @@ def logout(client):
         if "profile" in st.session_state:
             del st.session_state["profile"]
 
-        # Clear cookies
-        delete_cookie("auth_user_id")
-        delete_cookie("auth_user_email")
+        # Clear query params
+        st.query_params.clear()
 
         client.auth.sign_out()
         st.rerun()
