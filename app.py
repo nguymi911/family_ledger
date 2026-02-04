@@ -13,6 +13,14 @@ user = require_login(client)
 profile = get_profile(client, user.id)
 
 if not profile:
+    # Hide sidebar on profile setup page
+    st.markdown("""
+        <style>
+            [data-testid="stSidebar"] { display: none; }
+            [data-testid="stSidebarNav"] { display: none; }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.title("Welcome to Annie Budget!")
     st.write("Please set up your profile to continue.")
 
