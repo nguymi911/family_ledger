@@ -1,21 +1,23 @@
 import streamlit as st
 from datetime import date
 import database as db
-from database import get_monthly_transactions, load_categories, get_category_map, get_category_names
+from database import get_monthly_transactions, load_categories, get_category_map, get_category_names, get_all_profiles
 
 # Get client and user from session state (set by app.py)
 client = st.session_state["client"]
 user = st.session_state["user"]
 
-# Load categories for display
+# Load categories and profiles for display
 categories_data = load_categories(client)
 categories = get_category_map(categories_data)
 category_names_list = get_category_names(categories_data)
+profiles_data = get_all_profiles(client)
+profiles_map = {p["id"]: p["display_name"] for p in profiles_data} if profiles_data else {}
 
 st.title("Monthly Transactions")
 
-# Filters: Year, Month, Category
-col1, col2, col3 = st.columns(3)
+# Filters: Year, Month, Category, User
+col1, col2, col3, col4 = st.columns(4)
 with col1:
     selected_year = st.selectbox(
         "Year",
@@ -32,6 +34,9 @@ with col2:
 with col3:
     category_names = ["All"] + list(categories.keys())
     selected_category = st.selectbox("Category", options=category_names, index=0)
+with col4:
+    user_names = ["All"] + [p["display_name"] for p in profiles_data] if profiles_data else ["All"]
+    selected_user = st.selectbox("User", options=user_names, index=0)
 
 # Fetch transactions (all users in household)
 result = get_monthly_transactions(client, selected_year, selected_month)
@@ -44,12 +49,36 @@ if selected_category != "All":
         if tx.get("categories") and tx["categories"].get("name") == selected_category
     ]
 
+# Filter by user if selected
+if selected_user != "All":
+    transactions = [
+        tx for tx in transactions
+        if tx.get("profiles") and tx["profiles"].get("display_name") == selected_user
+    ]
+
 if transactions:
     # Calculate total
     total = sum(tx["amount"] for tx in transactions)
     st.metric("Total Spending", f"{total:,.0f}₫")
 
     st.divider()
+
+    # Column headers
+    col_user, col_date, col_desc, col_amount, col_cat, col_edit, col_del = st.columns([2, 2, 3, 2, 2, 1, 1])
+    with col_user:
+        st.write("**User**")
+    with col_date:
+        st.write("**Date**")
+    with col_desc:
+        st.write("**Description**")
+    with col_amount:
+        st.write("**Amount**")
+    with col_cat:
+        st.write("**Category**")
+    with col_edit:
+        st.write("")
+    with col_del:
+        st.write("")
 
     # Display transactions
     for tx in transactions:

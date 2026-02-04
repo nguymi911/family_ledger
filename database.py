@@ -166,3 +166,9 @@ def update_profile(client, user_id: str, display_name: str):
     client.from_("profiles").update({
         "display_name": display_name
     }).eq("id", user_id).execute()
+
+
+def get_all_profiles(client):
+    """Get all user profiles."""
+    result = client.from_("profiles").select("id, display_name").order("display_name").execute()
+    return result.data
