@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import urllib.parse
 
 
@@ -15,16 +16,67 @@ class SessionUser:
         self.email = email
 
 
+def get_cookies_from_header():
+    """Get cookies from the HTTP request header."""
+    try:
+        from streamlit.web.server.websocket_headers import _get_websocket_headers
+        headers = _get_websocket_headers()
+        if headers and "Cookie" in headers:
+            cookie_str = headers["Cookie"]
+            cookies = {}
+            for item in cookie_str.split(";"):
+                if "=" in item:
+                    key, value = item.strip().split("=", 1)
+                    cookies[key] = value
+            return cookies
+    except Exception:
+        pass
+    return {}
+
+
+def set_cookies_and_reload(user_id, email):
+    """Set cookies via JavaScript and reload the page."""
+    encoded_email = urllib.parse.quote(email)
+    max_age = 30 * 24 * 60 * 60  # 30 days
+
+    js = f"""
+    <script>
+        // Set cookies on parent window
+        document.cookie = "auth_user_id={user_id}; max-age={max_age}; path=/; SameSite=Strict";
+        document.cookie = "auth_user_email={encoded_email}; max-age={max_age}; path=/; SameSite=Strict";
+
+        // Reload parent page after a short delay
+        window.parent.location.reload();
+    </script>
+    """
+    components.html(js, height=0)
+
+
+def clear_cookies_and_reload():
+    """Clear cookies via JavaScript and reload the page."""
+    js = """
+    <script>
+        // Clear cookies on parent window
+        document.cookie = "auth_user_id=; max-age=0; path=/; SameSite=Strict";
+        document.cookie = "auth_user_email=; max-age=0; path=/; SameSite=Strict";
+
+        // Reload parent page
+        window.parent.location.reload();
+    </script>
+    """
+    components.html(js, height=0)
+
+
 def get_user(client):
-    """Get current authenticated user from query params or session."""
+    """Get current authenticated user from cookies or session."""
     # Check session state first (faster)
     if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
 
-    # Try to restore from query params
-    params = st.query_params
-    user_id = params.get("uid")
-    user_email = params.get("email")
+    # Try to restore from cookies
+    cookies = get_cookies_from_header()
+    user_id = cookies.get("auth_user_id")
+    user_email = cookies.get("auth_user_email")
 
     if user_id and user_email:
         # URL decode the email
@@ -63,11 +115,9 @@ def sign_in(client, email, password):
             st.session_state["auth_user_id"] = response.user.id
             st.session_state["auth_user_email"] = response.user.email
 
-            # Persist to URL query params
-            st.query_params["uid"] = response.user.id
-            st.query_params["email"] = urllib.parse.quote(response.user.email)
-
-            st.rerun()
+            # Set cookies and reload via JavaScript (don't call st.rerun)
+            set_cookies_and_reload(response.user.id, response.user.email)
+            st.stop()  # Stop execution, let JS reload the page
         return response
     except Exception as e:
         st.error(f"Sign in error: {e}")
@@ -85,11 +135,11 @@ def logout(client):
         if "profile" in st.session_state:
             del st.session_state["profile"]
 
-        # Clear query params
-        st.query_params.clear()
-
         client.auth.sign_out()
-        st.rerun()
+
+        # Clear cookies and reload via JavaScript
+        clear_cookies_and_reload()
+        st.stop()  # Stop execution, let JS reload the page
     except Exception as e:
         st.error(f"Logout error: {e}")
 
