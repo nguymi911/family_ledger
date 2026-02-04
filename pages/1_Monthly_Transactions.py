@@ -65,32 +65,55 @@ if transactions:
 
     st.divider()
 
-    # Display transactions (mobile-optimized)
+    # CSS for compact mobile-friendly table
+    st.markdown("""
+        <style>
+        .tx-table { width: 100%; font-size: 14px; }
+        .tx-table th, .tx-table td { padding: 8px 4px; text-align: left; }
+        .tx-table th { font-weight: 600; border-bottom: 2px solid #ddd; }
+        .tx-table td { border-bottom: 1px solid #eee; }
+        .tx-amount { text-align: right; white-space: nowrap; }
+        .tx-annie { color: #f59e0b; }
+        @media (max-width: 640px) {
+            .tx-table { font-size: 12px; }
+            .tx-table th, .tx-table td { padding: 6px 2px; }
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Table header
+    col_date, col_user, col_desc, col_amount, col_actions = st.columns([2, 2, 4, 2, 1])
+    with col_date:
+        st.markdown("**Date**")
+    with col_user:
+        st.markdown("**User**")
+    with col_desc:
+        st.markdown("**Description**")
+    with col_amount:
+        st.markdown("**Amount**")
+    with col_actions:
+        st.markdown("")
+
+    # Display transactions
     for tx in transactions:
         cat_name = tx.get("categories", {}).get("name", "—") if tx.get("categories") else "—"
         user_name = tx.get("profiles", {}).get("display_name", "—") if tx.get("profiles") else "—"
-        annie_tag = " 👶" if tx.get("is_annie_related") else ""
-        tx_date = tx["date"][5:] if tx.get("date") else "—"  # Show MM-DD only
+        annie_tag = "👶" if tx.get("is_annie_related") else ""
+        tx_date = tx["date"][5:] if tx.get("date") else "—"
 
-        col_info, col_amount, col_actions = st.columns([5, 2, 1])
-        with col_info:
-            st.write(f"**{tx['description']}**{annie_tag}")
-            st.caption(f"{user_name} · {tx_date} · {cat_name}")
+        col_date, col_user, col_desc, col_amount, col_actions = st.columns([2, 2, 4, 2, 1])
+        with col_date:
+            st.text(tx_date)
+        with col_user:
+            st.text(user_name)
+        with col_desc:
+            st.text(f"{tx['description']} {annie_tag}".strip())
         with col_amount:
-            st.write(f"**{tx['amount']:,.0f}₫**")
+            st.text(f"{tx['amount']:,.0f}₫")
         with col_actions:
-            col_edit, col_del = st.columns(2)
-            with col_edit:
-                if st.button("✏️", key=f"edit_tx_{tx['id']}"):
-                    st.session_state["edit_transaction"] = tx
-                    st.rerun()
-            with col_del:
-                if st.button("🗑️", key=f"del_tx_{tx['id']}"):
-                    try:
-                        db.delete_transaction(client, tx["id"])
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+            if st.button("✏️", key=f"edit_{tx['id']}"):
+                st.session_state["edit_transaction"] = tx
+                st.rerun()
 else:
     st.info(f"No transactions for {date(selected_year, selected_month, 1).strftime('%B %Y')}")
 
