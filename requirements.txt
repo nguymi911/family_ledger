@@ -2,3 +2,4 @@ streamlit
 st-supabase-connection
 gotrue
 google-generativeai
+extra-streamlit-components

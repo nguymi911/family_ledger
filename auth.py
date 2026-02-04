@@ -1,5 +1,5 @@
 import streamlit as st
-import database as db
+import extra_streamlit_components as stx
 
 
 class MockUser:
@@ -15,11 +15,29 @@ class SessionUser:
         self.email = email
 
 
+@st.cache_resource(experimental_allow_widgets=True)
+def get_cookie_manager():
+    """Get cookie manager instance."""
+    return stx.CookieManager()
+
+
 def get_user(client):
-    """Get current authenticated user from browser-specific session."""
-    # Check if we have a user stored in this browser's session
+    """Get current authenticated user from cookies or session."""
+    # Check session state first (faster)
     if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
+
+    # Try to restore from cookies
+    cookie_manager = get_cookie_manager()
+    user_id = cookie_manager.get("auth_user_id")
+    user_email = cookie_manager.get("auth_user_email")
+
+    if user_id and user_email:
+        # Restore to session state
+        st.session_state["auth_user_id"] = user_id
+        st.session_state["auth_user_email"] = user_email
+        return SessionUser(user_id, user_email)
+
     return None
 
 
@@ -45,9 +63,15 @@ def sign_in(client, email, password):
     try:
         response = client.auth.sign_in_with_password({"email": email, "password": password})
         if response.user:
-            # Store user info in browser-specific session state
+            # Store user info in session state
             st.session_state["auth_user_id"] = response.user.id
             st.session_state["auth_user_email"] = response.user.email
+
+            # Persist to cookies (expires in 30 days)
+            cookie_manager = get_cookie_manager()
+            cookie_manager.set("auth_user_id", response.user.id, max_age=30*24*60*60)
+            cookie_manager.set("auth_user_email", response.user.email, max_age=30*24*60*60)
+
             st.rerun()
         return response
     except Exception as e:
@@ -58,13 +82,19 @@ def sign_in(client, email, password):
 def logout(client):
     """Sign out the current user."""
     try:
-        # Clear browser-specific session
+        # Clear session state
         if "auth_user_id" in st.session_state:
             del st.session_state["auth_user_id"]
         if "auth_user_email" in st.session_state:
             del st.session_state["auth_user_email"]
         if "profile" in st.session_state:
             del st.session_state["profile"]
+
+        # Clear cookies
+        cookie_manager = get_cookie_manager()
+        cookie_manager.delete("auth_user_id")
+        cookie_manager.delete("auth_user_email")
+
         client.auth.sign_out()
         st.rerun()
     except Exception as e:
