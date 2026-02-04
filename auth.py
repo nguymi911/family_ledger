@@ -1,6 +1,9 @@
 import streamlit as st
 from streamlit_cookies_controller import CookieController
 
+# Cookie expiration: 30 days in seconds
+COOKIE_MAX_AGE = 30 * 24 * 60 * 60
+
 
 class SessionUser:
     """User object constructed from session state."""
@@ -9,15 +12,39 @@ class SessionUser:
         self.email = email
 
 
+def get_cookie_controller():
+    """Get or create a singleton CookieController instance."""
+    if "_cookie_controller" not in st.session_state:
+        st.session_state["_cookie_controller"] = CookieController()
+    return st.session_state["_cookie_controller"]
+
+
 def get_user(client):
     """Get current authenticated user from cookies or session."""
-    controller = CookieController()
+    controller = get_cookie_controller()
 
     # Check session state first (faster)
     if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
 
     # Try to restore from cookies
+    # First call getAll() to ensure cookies are loaded (handles timing issue)
+    all_cookies = controller.getAll()
+
+    # If cookies haven't loaded yet (returns None on first run), trigger a rerun
+    if all_cookies is None:
+        # Mark that we're waiting for cookies to prevent infinite loops
+        if "_cookies_loading" not in st.session_state:
+            st.session_state["_cookies_loading"] = True
+            st.rerun()
+        # If we already tried once and still None, cookies are truly empty
+        del st.session_state["_cookies_loading"]
+        return None
+
+    # Clear the loading flag if it exists
+    if "_cookies_loading" in st.session_state:
+        del st.session_state["_cookies_loading"]
+
     user_id = controller.get("auth_user_id")
     user_email = controller.get("auth_user_email")
 
@@ -49,7 +76,7 @@ def sign_up(client, email, password, display_name):
 
 def sign_in(client, email, password):
     """Sign in with email and password."""
-    controller = CookieController()
+    controller = get_cookie_controller()
     try:
         response = client.auth.sign_in_with_password({"email": email, "password": password})
         if response.user:
@@ -57,9 +84,9 @@ def sign_in(client, email, password):
             st.session_state["auth_user_id"] = response.user.id
             st.session_state["auth_user_email"] = response.user.email
 
-            # Persist to cookies
-            controller.set("auth_user_id", response.user.id)
-            controller.set("auth_user_email", response.user.email)
+            # Persist to cookies with 30-day expiration
+            controller.set("auth_user_id", response.user.id, max_age=COOKIE_MAX_AGE)
+            controller.set("auth_user_email", response.user.email, max_age=COOKIE_MAX_AGE)
 
             st.rerun()
         return response
@@ -70,7 +97,7 @@ def sign_in(client, email, password):
 
 def logout(client):
     """Sign out the current user."""
-    controller = CookieController()
+    controller = get_cookie_controller()
     try:
         # Clear session state
         if "auth_user_id" in st.session_state:
