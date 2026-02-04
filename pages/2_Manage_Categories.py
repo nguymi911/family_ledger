@@ -3,6 +3,10 @@ import database as db
 from database import load_categories
 
 # Get client from session state (set by app.py)
+if "client" not in st.session_state:
+    st.error("Session not initialized. Please refresh the page.")
+    st.stop()
+
 client = st.session_state["client"]
 
 st.title("Manage Categories")

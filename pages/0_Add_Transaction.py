@@ -4,6 +4,10 @@ from database import load_categories, get_category_map, get_category_names
 from components import render_budget, render_smart_input
 
 # Get client and user from session state (set by app.py)
+if "client" not in st.session_state or "user" not in st.session_state:
+    st.error("Session not initialized. Please refresh the page.")
+    st.stop()
+
 client = st.session_state["client"]
 user = st.session_state["user"]
 
