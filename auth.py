@@ -8,14 +8,18 @@ class MockUser:
     email = "demo@example.com"
 
 
+class SessionUser:
+    """User object constructed from session state."""
+    def __init__(self, user_id, email):
+        self.id = user_id
+        self.email = email
+
+
 def get_user(client):
-    """Get current authenticated user from session."""
-    try:
-        session = client.auth.get_session()
-        if session:
-            return session.user
-    except Exception:
-        pass
+    """Get current authenticated user from browser-specific session."""
+    # Check if we have a user stored in this browser's session
+    if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
+        return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
     return None
 
 
@@ -41,6 +45,9 @@ def sign_in(client, email, password):
     try:
         response = client.auth.sign_in_with_password({"email": email, "password": password})
         if response.user:
+            # Store user info in browser-specific session state
+            st.session_state["auth_user_id"] = response.user.id
+            st.session_state["auth_user_email"] = response.user.email
             st.rerun()
         return response
     except Exception as e:
@@ -51,6 +58,13 @@ def sign_in(client, email, password):
 def logout(client):
     """Sign out the current user."""
     try:
+        # Clear browser-specific session
+        if "auth_user_id" in st.session_state:
+            del st.session_state["auth_user_id"]
+        if "auth_user_email" in st.session_state:
+            del st.session_state["auth_user_email"]
+        if "profile" in st.session_state:
+            del st.session_state["profile"]
         client.auth.sign_out()
         st.rerun()
     except Exception as e:
