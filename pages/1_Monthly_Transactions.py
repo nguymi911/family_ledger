@@ -113,8 +113,8 @@ if transactions:
         tx_date = tx["date"][5:] if tx.get("date") else ""
 
         with st.container():
-            # Description and amount on same line
-            st.markdown(f"**{tx['description']}{annie_tag}** · {tx['amount']:,.0f}₫")
+            # Amount and description on same line
+            st.markdown(f"**{tx['amount']:,.0f}₫** · **{tx['description']}{annie_tag}**")
             meta_parts = [tx_date]
             if cat_name:
                 meta_parts.append(cat_name)
