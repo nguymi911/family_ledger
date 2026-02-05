@@ -62,6 +62,9 @@ def get_user(client):
     if ("auth_user_id" in st.session_state and
         "auth_user_email" in st.session_state and
         "session_token" in st.session_state):
+        # Ensure session token stays in URL for page navigation
+        if not st.query_params.get("session"):
+            st.query_params["session"] = st.session_state["session_token"]
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
 
     # Try to restore session from cookie if not in URL
