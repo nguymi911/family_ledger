@@ -39,6 +39,7 @@ CREATE TABLE public.mortgage_config (
 CREATE TABLE public.sessions (
   token UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '7 days'
 );

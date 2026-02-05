@@ -175,24 +175,25 @@ def get_all_profiles(client):
 
 
 # Session functions
-def create_session(client, user_id: str):
+def create_session(client, user_id: str, email: str):
     """Create a new session token for a user."""
     result = client.from_("sessions").insert({
-        "user_id": user_id
+        "user_id": user_id,
+        "email": email
     }).execute()
     return result.data[0]["token"] if result.data else None
 
 
 def get_session(client, token: str):
-    """Get session by token, returns user_id if valid and not expired."""
+    """Get session by token, returns (user_id, email) if valid and not expired."""
     from datetime import datetime, timezone
 
     result = client.from_("sessions").select(
-        "user_id, expires_at"
+        "user_id, email, expires_at"
     ).eq("token", token).execute()
 
     if not result.data:
-        return None
+        return None, None
 
     session = result.data[0]
     expires_at_str = session["expires_at"]
@@ -210,12 +211,12 @@ def get_session(client, token: str):
             expires_at = datetime.fromisoformat(expires_at_str).replace(tzinfo=timezone.utc)
     except ValueError:
         # Fallback: assume valid if we can't parse
-        return session["user_id"]
+        return session["user_id"], session.get("email")
 
     if expires_at > datetime.now(timezone.utc):
-        return session["user_id"]
+        return session["user_id"], session.get("email")
 
-    return None
+    return None, None
 
 
 def delete_session(client, token: str):
