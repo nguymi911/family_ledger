@@ -1,5 +1,54 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import database as db
+
+
+def set_session_cookie(token: str):
+    """Set session token in browser cookie via JavaScript."""
+    js = f"""
+    <script>
+        document.cookie = "session_token={token}; path=/; max-age=604800; SameSite=Lax";
+    </script>
+    """
+    components.html(js, height=0)
+
+
+def clear_session_cookie():
+    """Clear session cookie via JavaScript."""
+    js = """
+    <script>
+        document.cookie = "session_token=; path=/; max-age=0";
+    </script>
+    """
+    components.html(js, height=0)
+
+
+def get_session_from_cookie():
+    """
+    Read session token from cookie using JS and redirect if needed.
+    Returns True if a redirect was triggered.
+    """
+    # Check if we already have session in query params
+    if st.query_params.get("session"):
+        return False
+
+    # Inject JS to read cookie and redirect if token exists
+    js = """
+    <script>
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'session_token' && value) {
+                // Add session to URL and reload
+                const url = new URL(window.location.href);
+                url.searchParams.set('session', value);
+                window.location.href = url.toString();
+            }
+        }
+    </script>
+    """
+    components.html(js, height=0)
+    return False
 
 
 class MockUser:
@@ -20,6 +69,9 @@ def get_user(client):
     # Check session state first (faster)
     if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
+
+    # Try to restore session from cookie if not in URL
+    get_session_from_cookie()
 
     # Try to restore from session token in query params
     params = st.query_params
@@ -86,7 +138,8 @@ def sign_in(client, email, password):
             st.session_state["auth_user_email"] = response.user.email
             st.session_state["session_token"] = session_token
 
-            # Persist only session token to URL query params (not raw user data)
+            # Persist session token to cookie and URL
+            set_session_cookie(session_token)
             st.query_params["session"] = session_token
 
             st.rerun()
@@ -112,7 +165,8 @@ def logout(client):
         if "profile" in st.session_state:
             del st.session_state["profile"]
 
-        # Clear query params
+        # Clear cookie and query params
+        clear_session_cookie()
         st.query_params.clear()
 
         client.auth.sign_out()
