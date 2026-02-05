@@ -122,15 +122,12 @@ if transactions:
                 meta_parts.append(user_name)
             st.caption(" · ".join(meta_parts))
 
-            # Action buttons
-            col_edit, col_del = st.columns(2)
-            with col_edit:
-                if st.button("Edit", key=f"edit_{tx['id']}", use_container_width=True):
-                    st.session_state["edit_transaction"] = tx
-                    st.rerun()
-            with col_del:
-                pending_delete = st.session_state.get("confirm_delete_transaction")
-                if pending_delete == tx["id"]:
+            # Action buttons side by side
+            pending_delete = st.session_state.get("confirm_delete_transaction")
+            if pending_delete == tx["id"]:
+                st.warning("Delete this transaction?")
+                col1, col2 = st.columns(2, gap="small")
+                with col1:
                     if st.button("Confirm", key=f"confirm_{tx['id']}", type="primary", use_container_width=True):
                         try:
                             db.delete_transaction(client, tx["id"])
@@ -139,17 +136,20 @@ if transactions:
                             st.rerun()
                         except Exception as e:
                             st.error(f"Error: {e}")
-                else:
+                with col2:
+                    if st.button("Cancel", key=f"cancel_{tx['id']}", use_container_width=True):
+                        del st.session_state["confirm_delete_transaction"]
+                        st.rerun()
+            else:
+                col1, col2 = st.columns(2, gap="small")
+                with col1:
+                    if st.button("Edit", key=f"edit_{tx['id']}", use_container_width=True):
+                        st.session_state["edit_transaction"] = tx
+                        st.rerun()
+                with col2:
                     if st.button("Delete", key=f"delete_{tx['id']}", use_container_width=True):
                         st.session_state["confirm_delete_transaction"] = tx["id"]
                         st.rerun()
-
-            # Show cancel option when confirming delete
-            if st.session_state.get("confirm_delete_transaction") == tx["id"]:
-                st.warning("Delete this transaction?")
-                if st.button("Cancel", key=f"cancel_{tx['id']}"):
-                    del st.session_state["confirm_delete_transaction"]
-                    st.rerun()
 
             st.divider()
 else:
