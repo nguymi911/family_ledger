@@ -26,6 +26,10 @@ st.markdown("""
     [data-testid="stWidgetLabel"] {
         font-size: 0.9rem;
     }
+    /* Hide "Press Enter to submit form" text */
+    [data-testid="stFormSubmitButton"] div[data-testid="stMarkdownContainer"] {
+        display: none;
+    }
     </style>
 """, unsafe_allow_html=True)
 
