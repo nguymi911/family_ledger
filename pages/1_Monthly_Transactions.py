@@ -65,12 +65,14 @@ if "selected_user" in dir() and selected_user != "All":
 # Mobile-friendly styles
 st.markdown("""
     <style>
-    /* Larger text for transaction content */
+    /* Large text for amount and description */
     [data-testid="stMarkdown"] p {
-        font-size: 1.1rem;
+        font-size: 1.25rem;
+        line-height: 1.4;
     }
+    /* Smaller caption text */
     [data-testid="stCaptionContainer"] {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
     }
     /* Smaller buttons */
     [data-testid="stButton"] button {
