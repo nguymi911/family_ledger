@@ -11,12 +11,6 @@ client = st.session_state["client"]
 
 st.title("Manage Categories")
 
-if st.button("🔄 Refresh Data"):
-    st.cache_data.clear()
-    st.rerun()
-
-st.divider()
-
 # Add new category
 st.subheader("Add Category")
 with st.form("add_category_form"):
