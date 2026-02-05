@@ -18,25 +18,30 @@ category_names_list = get_category_names(categories_data)
 profiles_data = get_all_profiles(client)
 profiles_map = {p["id"]: p["display_name"] for p in profiles_data} if profiles_data else {}
 
-st.title("Monthly Transactions")
+st.title("Transactions")
 
-# Filters: Year, Month, Category, User (2x2 grid for mobile)
+# Filters: Year and Month on one row
 col1, col2 = st.columns(2)
 with col1:
     selected_year = st.selectbox(
         "Year",
         options=range(date.today().year, date.today().year - 5, -1),
-        index=0
+        index=0,
+        label_visibility="collapsed"
     )
-    category_names = ["All"] + list(categories.keys())
-    selected_category = st.selectbox("Category", options=category_names, index=0)
 with col2:
     selected_month = st.selectbox(
         "Month",
         options=range(1, 13),
         format_func=lambda m: date(2000, m, 1).strftime("%B"),
-        index=date.today().month - 1
+        index=date.today().month - 1,
+        label_visibility="collapsed"
     )
+
+# Optional filters in expander
+with st.expander("Filters"):
+    category_names = ["All"] + list(categories.keys())
+    selected_category = st.selectbox("Category", options=category_names, index=0)
     user_names = ["All"] + [p["display_name"] for p in profiles_data] if profiles_data else ["All"]
     selected_user = st.selectbox("User", options=user_names, index=0)
 
@@ -44,127 +49,137 @@ with col2:
 result = get_monthly_transactions(client, selected_year, selected_month)
 transactions = result.data
 
-# Filter by category if selected
-if selected_category != "All":
+# Apply filters
+if "selected_category" in dir() and selected_category != "All":
     transactions = [
         tx for tx in transactions
         if tx.get("categories") and tx["categories"].get("name") == selected_category
     ]
 
-# Filter by user if selected
-if selected_user != "All":
+if "selected_user" in dir() and selected_user != "All":
     transactions = [
         tx for tx in transactions
         if tx.get("profiles") and tx["profiles"].get("display_name") == selected_user
     ]
 
+# Mobile-friendly card styles
+st.markdown("""
+    <style>
+    .tx-card {
+        background: var(--background-color);
+        border: 1px solid var(--secondary-background-color);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+    .tx-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+    }
+    .tx-amount {
+        font-size: 1.1em;
+        font-weight: 600;
+    }
+    .tx-date {
+        color: var(--text-color);
+        opacity: 0.7;
+        font-size: 0.9em;
+    }
+    .tx-desc {
+        margin: 4px 0;
+    }
+    .tx-meta {
+        font-size: 0.85em;
+        color: var(--text-color);
+        opacity: 0.6;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 if transactions:
     # Calculate total
     total = sum(tx["amount"] for tx in transactions)
-    st.metric("Total Spending", f"{total:,.0f}₫")
+    st.metric("Total", f"{total:,.0f}₫")
 
     st.divider()
 
-    # CSS for compact mobile-friendly table
-    st.markdown("""
-        <style>
-        .tx-table { width: 100%; font-size: 14px; }
-        .tx-table th, .tx-table td { padding: 8px 4px; text-align: left; }
-        .tx-table th { font-weight: 600; border-bottom: 2px solid #ddd; }
-        .tx-table td { border-bottom: 1px solid #eee; }
-        .tx-amount { text-align: right; white-space: nowrap; }
-        .tx-annie { color: #f59e0b; }
-        @media (max-width: 640px) {
-            .tx-table { font-size: 12px; }
-            .tx-table th, .tx-table td { padding: 6px 2px; }
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # Table header
-    col_date, col_user, col_desc, col_amount, col_edit, col_del = st.columns([2, 2, 4, 2, 1, 1])
-    with col_date:
-        st.markdown("**Date**")
-    with col_user:
-        st.markdown("**User**")
-    with col_desc:
-        st.markdown("**Description**")
-    with col_amount:
-        st.markdown("**Amount**")
-    with col_edit:
-        st.markdown("")
-    with col_del:
-        st.markdown("")
-
-    # Display transactions
+    # Display transactions as cards
     for tx in transactions:
-        cat_name = tx.get("categories", {}).get("name", "—") if tx.get("categories") else "—"
-        user_name = tx.get("profiles", {}).get("display_name", "—") if tx.get("profiles") else "—"
-        annie_tag = "👶" if tx.get("is_annie_related") else ""
-        tx_date = tx["date"][5:] if tx.get("date") else "—"
+        cat_name = tx.get("categories", {}).get("name", "") if tx.get("categories") else ""
+        user_name = tx.get("profiles", {}).get("display_name", "") if tx.get("profiles") else ""
+        annie_tag = " 👶" if tx.get("is_annie_related") else ""
+        tx_date = tx["date"][5:] if tx.get("date") else ""
 
-        col_date, col_user, col_desc, col_amount, col_edit, col_del = st.columns([2, 2, 4, 2, 1, 1])
-        with col_date:
-            st.text(tx_date)
-        with col_user:
-            st.text(user_name)
-        with col_desc:
-            st.text(f"{tx['description']} {annie_tag}".strip())
-        with col_amount:
-            st.text(f"{tx['amount']:,.0f}₫")
-        with col_edit:
-            if st.button("✏️", key=f"edit_{tx['id']}"):
-                st.session_state["edit_transaction"] = tx
-                st.rerun()
-        with col_del:
-            # Two-step delete confirmation
-            pending_delete = st.session_state.get("confirm_delete_transaction")
-            if pending_delete == tx["id"]:
-                if st.button("Yes", key=f"confirm_{tx['id']}", type="primary"):
-                    try:
-                        db.delete_transaction(client, tx["id"])
-                        st.success("Deleted")
-                        del st.session_state["confirm_delete_transaction"]
-                        st.cache_data.clear()
+        with st.container():
+            # Main content row: description and amount
+            col_main, col_amount = st.columns([3, 1])
+            with col_main:
+                st.markdown(f"**{tx['description']}{annie_tag}**")
+                meta_parts = [tx_date]
+                if cat_name:
+                    meta_parts.append(cat_name)
+                if user_name:
+                    meta_parts.append(user_name)
+                st.caption(" · ".join(meta_parts))
+            with col_amount:
+                st.markdown(f"**{tx['amount']:,.0f}₫**")
+
+            # Action buttons
+            col_edit, col_del, col_space = st.columns([1, 1, 3])
+            with col_edit:
+                if st.button("Edit", key=f"edit_{tx['id']}", use_container_width=True):
+                    st.session_state["edit_transaction"] = tx
+                    st.rerun()
+            with col_del:
+                pending_delete = st.session_state.get("confirm_delete_transaction")
+                if pending_delete == tx["id"]:
+                    if st.button("Confirm", key=f"confirm_{tx['id']}", type="primary", use_container_width=True):
+                        try:
+                            db.delete_transaction(client, tx["id"])
+                            del st.session_state["confirm_delete_transaction"]
+                            st.cache_data.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                else:
+                    if st.button("Delete", key=f"delete_{tx['id']}", use_container_width=True):
+                        st.session_state["confirm_delete_transaction"] = tx["id"]
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Error: {e}")
-            else:
-                if st.button("🗑️", key=f"delete_{tx['id']}"):
-                    st.session_state["confirm_delete_transaction"] = tx["id"]
+
+            # Show cancel option when confirming delete
+            if st.session_state.get("confirm_delete_transaction") == tx["id"]:
+                st.warning("Delete this transaction?")
+                if st.button("Cancel", key=f"cancel_{tx['id']}"):
+                    del st.session_state["confirm_delete_transaction"]
                     st.rerun()
 
-        # Show confirmation message below the row
-        if st.session_state.get("confirm_delete_transaction") == tx["id"]:
-            st.warning(f"Delete this transaction? ({tx['description']}: {tx['amount']:,.0f}₫)")
-            if st.button("Cancel", key=f"cancel_{tx['id']}"):
-                del st.session_state["confirm_delete_transaction"]
-                st.rerun()
+            st.divider()
 else:
     st.info(f"No transactions for {date(selected_year, selected_month, 1).strftime('%B %Y')}")
 
-# Edit transaction form
+# Edit transaction form (stacked vertically for mobile)
 if "edit_transaction" in st.session_state:
     tx = st.session_state["edit_transaction"]
-    st.divider()
     st.subheader("Edit Transaction")
+
     with st.form("edit_tx_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            edit_amount = st.number_input("Amount", value=float(tx["amount"]), min_value=0.0)
-            current_cat = tx.get("categories", {}).get("name") if tx.get("categories") else None
-            cat_index = category_names_list.index(current_cat) if current_cat in category_names_list else 0
-            edit_category = st.selectbox("Category", options=category_names_list, index=cat_index)
-        with col2:
-            edit_description = st.text_input("Description", value=tx.get("description") or "")
-            edit_date = st.date_input("Date", value=date.fromisoformat(tx["date"]) if tx.get("date") else date.today())
+        edit_description = st.text_input("Description", value=tx.get("description") or "")
+        edit_amount = st.number_input("Amount (₫)", value=float(tx["amount"]), min_value=0.0, step=1000.0)
+
+        current_cat = tx.get("categories", {}).get("name") if tx.get("categories") else None
+        cat_index = category_names_list.index(current_cat) if current_cat in category_names_list else 0
+        edit_category = st.selectbox("Category", options=category_names_list, index=cat_index)
+
+        edit_date = st.date_input("Date", value=date.fromisoformat(tx["date"]) if tx.get("date") else date.today())
         edit_annie = st.checkbox("Annie-related", value=tx.get("is_annie_related", False))
 
         col_save, col_cancel = st.columns(2)
         with col_save:
-            save_edit = st.form_submit_button("Save Changes", type="primary")
+            save_edit = st.form_submit_button("Save", type="primary", use_container_width=True)
         with col_cancel:
-            cancel_edit = st.form_submit_button("Cancel")
+            cancel_edit = st.form_submit_button("Cancel", use_container_width=True)
 
     if save_edit:
         category_id = categories.get(edit_category) if categories else None
