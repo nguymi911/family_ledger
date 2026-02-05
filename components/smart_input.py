@@ -47,9 +47,9 @@ def _handle_category_command(client):
     if budget:
         st.write(f"**Budget:** {budget:,.0f}₫")
 
-    col_confirm, col_cancel = st.columns(2)
+    col_confirm, col_cancel = st.columns(2, gap="small")
     with col_confirm:
-        if st.button("Confirm", type="primary", key="confirm_cat"):
+        if st.button("Confirm", type="primary", key="confirm_cat", use_container_width=True):
             try:
                 if action == "add":
                     db.add_category(client, name, budget)
@@ -68,7 +68,7 @@ def _handle_category_command(client):
             except Exception as e:
                 st.error(f"Error: {e}")
     with col_cancel:
-        if st.button("Cancel", key="cancel_cat"):
+        if st.button("Cancel", key="cancel_cat", use_container_width=True):
             del st.session_state["parsed_category"]
             st.rerun()
 
@@ -82,28 +82,24 @@ def _handle_expense_form(client, user, categories, category_names):
 
     st.write("**Review & Save:**")
     with st.form("save_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            amount = st.number_input("Amount", value=parsed["amount"], min_value=0.0)
-            category = st.selectbox(
-                "Category",
-                options=category_names,
-                index=category_names.index(parsed["category"]) if parsed["category"] in category_names else 0
-            )
-        with col2:
-            description = st.text_input("Description", value=parsed["description"])
-            tx_date = st.date_input(
-                "Date",
-                value=date.fromisoformat(parsed["date"]) if parsed["date"] else date.today()
-            )
-
+        description = st.text_input("Description", value=parsed["description"])
+        amount = st.number_input("Amount (₫)", value=parsed["amount"], min_value=0.0, step=1000.0)
+        category = st.selectbox(
+            "Category",
+            options=category_names,
+            index=category_names.index(parsed["category"]) if parsed["category"] in category_names else 0
+        )
+        tx_date = st.date_input(
+            "Date",
+            value=date.fromisoformat(parsed["date"]) if parsed["date"] else date.today()
+        )
         is_annie = st.checkbox("Annie-related expense", value=parsed["is_annie_related"])
 
-        col_save, col_cancel = st.columns(2)
+        col_save, col_cancel = st.columns(2, gap="small")
         with col_save:
-            save_clicked = st.form_submit_button("Save Transaction", type="primary")
+            save_clicked = st.form_submit_button("Save", type="primary", use_container_width=True)
         with col_cancel:
-            cancel_clicked = st.form_submit_button("Cancel")
+            cancel_clicked = st.form_submit_button("Cancel", use_container_width=True)
 
     if save_clicked:
         category_id = categories.get(category) if categories else None
