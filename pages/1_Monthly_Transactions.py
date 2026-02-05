@@ -62,38 +62,21 @@ if "selected_user" in dir() and selected_user != "All":
         if tx.get("profiles") and tx["profiles"].get("display_name") == selected_user
     ]
 
-# Mobile-friendly card styles
+# Mobile-friendly styles
 st.markdown("""
     <style>
-    .tx-card {
-        background: var(--background-color);
-        border: 1px solid var(--secondary-background-color);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 8px;
+    /* Larger text for transaction content */
+    [data-testid="stMarkdown"] p {
+        font-size: 1.1rem;
     }
-    .tx-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 4px;
+    [data-testid="stCaptionContainer"] {
+        font-size: 0.95rem;
     }
-    .tx-amount {
-        font-size: 1.1em;
-        font-weight: 600;
-    }
-    .tx-date {
-        color: var(--text-color);
-        opacity: 0.7;
-        font-size: 0.9em;
-    }
-    .tx-desc {
-        margin: 4px 0;
-    }
-    .tx-meta {
-        font-size: 0.85em;
-        color: var(--text-color);
-        opacity: 0.6;
+    /* Smaller buttons */
+    [data-testid="stButton"] button {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+        min-height: 0;
     }
     </style>
 """, unsafe_allow_html=True)
