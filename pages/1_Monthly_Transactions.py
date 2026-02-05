@@ -113,18 +113,14 @@ if transactions:
         tx_date = tx["date"][5:] if tx.get("date") else ""
 
         with st.container():
-            # Main content row: description and amount
-            col_main, col_amount = st.columns([3, 1])
-            with col_main:
-                st.markdown(f"**{tx['description']}{annie_tag}**")
-                meta_parts = [tx_date]
-                if cat_name:
-                    meta_parts.append(cat_name)
-                if user_name:
-                    meta_parts.append(user_name)
-                st.caption(" · ".join(meta_parts))
-            with col_amount:
-                st.markdown(f"**{tx['amount']:,.0f}₫**")
+            # Description and amount on same line
+            st.markdown(f"**{tx['description']}{annie_tag}** · {tx['amount']:,.0f}₫")
+            meta_parts = [tx_date]
+            if cat_name:
+                meta_parts.append(cat_name)
+            if user_name:
+                meta_parts.append(user_name)
+            st.caption(" · ".join(meta_parts))
 
             # Action buttons
             col_edit, col_del = st.columns(2)
