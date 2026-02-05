@@ -1,54 +1,52 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import database as db
 
 
 def set_session_cookie(token: str):
     """Set session token in browser cookie via JavaScript."""
-    js = f"""
-    <script>
-        document.cookie = "session_token={token}; path=/; max-age=604800; SameSite=Lax";
-    </script>
-    """
-    components.html(js, height=0)
+    st.markdown(f"""
+        <script>
+            document.cookie = "session_token={token}; path=/; max-age=604800; SameSite=Lax";
+        </script>
+    """, unsafe_allow_html=True)
 
 
 def clear_session_cookie():
     """Clear session cookie via JavaScript."""
-    js = """
-    <script>
-        document.cookie = "session_token=; path=/; max-age=0";
-    </script>
-    """
-    components.html(js, height=0)
+    st.markdown("""
+        <script>
+            document.cookie = "session_token=; path=/; max-age=0; path=/";
+        </script>
+    """, unsafe_allow_html=True)
 
 
 def get_session_from_cookie():
     """
     Read session token from cookie using JS and redirect if needed.
-    Returns True if a redirect was triggered.
     """
     # Check if we already have session in query params
     if st.query_params.get("session"):
-        return False
+        return
 
     # Inject JS to read cookie and redirect if token exists
-    js = """
-    <script>
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            const [name, value] = cookie.trim().split('=');
-            if (name === 'session_token' && value) {
-                // Add session to URL and reload
-                const url = new URL(window.location.href);
-                url.searchParams.set('session', value);
-                window.location.href = url.toString();
-            }
-        }
-    </script>
-    """
-    components.html(js, height=0)
-    return False
+    # Using st.markdown for earlier execution than components.html
+    st.markdown("""
+        <script>
+            (function() {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'session_token' && value) {
+                        const url = new URL(window.location.href);
+                        if (!url.searchParams.has('session')) {
+                            url.searchParams.set('session', value);
+                            window.location.replace(url.toString());
+                        }
+                    }
+                }
+            })();
+        </script>
+    """, unsafe_allow_html=True)
 
 
 class SessionUser:
