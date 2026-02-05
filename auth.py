@@ -27,7 +27,12 @@ def get_user(client):
 
     if session_token:
         # Validate session token
-        user_id = db.get_session(client, session_token)
+        try:
+            user_id = db.get_session(client, session_token)
+        except Exception as e:
+            st.error(f"Session lookup error: {e}")
+            return None
+
         if user_id:
             # Get user email from profile
             profile = db.get_profile(client, user_id)
@@ -38,6 +43,8 @@ def get_user(client):
                 st.session_state["auth_user_email"] = email
                 st.session_state["session_token"] = session_token
                 return SessionUser(user_id, email)
+            else:
+                st.error(f"No profile found for user_id: {user_id}")
         else:
             # Invalid or expired session token, clear it
             st.query_params.clear()
@@ -69,6 +76,10 @@ def sign_in(client, email, password):
         if response.user:
             # Create session token
             session_token = db.create_session(client, response.user.id)
+
+            if not session_token:
+                st.error("Failed to create session. Check that the sessions table exists in Supabase.")
+                return None
 
             # Store user info in session state
             st.session_state["auth_user_id"] = response.user.id

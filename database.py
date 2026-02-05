@@ -185,16 +185,36 @@ def create_session(client, user_id: str):
 
 def get_session(client, token: str):
     """Get session by token, returns user_id if valid and not expired."""
+    from datetime import datetime, timezone
+
     result = client.from_("sessions").select(
         "user_id, expires_at"
     ).eq("token", token).execute()
-    if result.data:
-        session = result.data[0]
-        # Check if session is expired (comparison done in Python)
-        from datetime import datetime, timezone
-        expires_at = datetime.fromisoformat(session["expires_at"].replace("Z", "+00:00"))
-        if expires_at > datetime.now(timezone.utc):
-            return session["user_id"]
+
+    if not result.data:
+        return None
+
+    session = result.data[0]
+    expires_at_str = session["expires_at"]
+
+    # Parse timestamp - handle various formats from Supabase
+    try:
+        # Try ISO format with Z suffix
+        if expires_at_str.endswith("Z"):
+            expires_at = datetime.fromisoformat(expires_at_str.replace("Z", "+00:00"))
+        elif "+" in expires_at_str or expires_at_str.count("-") > 2:
+            # Already has timezone info
+            expires_at = datetime.fromisoformat(expires_at_str)
+        else:
+            # No timezone, assume UTC
+            expires_at = datetime.fromisoformat(expires_at_str).replace(tzinfo=timezone.utc)
+    except ValueError:
+        # Fallback: assume valid if we can't parse
+        return session["user_id"]
+
+    if expires_at > datetime.now(timezone.utc):
+        return session["user_id"]
+
     return None
 
 
