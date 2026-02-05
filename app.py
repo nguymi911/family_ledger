@@ -4,6 +4,31 @@ from auth import require_login, logout
 
 st.set_page_config(page_title="Annie Budget", page_icon="💰")
 
+# Global styles for consistent look across all pages
+st.markdown("""
+    <style>
+    /* Main content text */
+    [data-testid="stMarkdown"] p {
+        font-size: 1.15rem;
+        line-height: 1.4;
+    }
+    /* Caption/meta text */
+    [data-testid="stCaptionContainer"] {
+        font-size: 0.85rem;
+    }
+    /* Compact buttons */
+    [data-testid="stButton"] button {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+        min-height: 0;
+    }
+    /* Form labels */
+    [data-testid="stWidgetLabel"] {
+        font-size: 0.9rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # Initialize connection and authenticate
 conn = get_connection()
 client = conn.client

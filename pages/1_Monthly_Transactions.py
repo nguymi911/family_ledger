@@ -62,27 +62,6 @@ if "selected_user" in dir() and selected_user != "All":
         if tx.get("profiles") and tx["profiles"].get("display_name") == selected_user
     ]
 
-# Mobile-friendly styles
-st.markdown("""
-    <style>
-    /* Large text for amount and description */
-    [data-testid="stMarkdown"] p {
-        font-size: 1.25rem;
-        line-height: 1.4;
-    }
-    /* Smaller caption text */
-    [data-testid="stCaptionContainer"] {
-        font-size: 0.85rem;
-    }
-    /* Smaller buttons */
-    [data-testid="stButton"] button {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.85rem;
-        min-height: 0;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 if transactions:
     # Calculate total
     total = sum(tx["amount"] for tx in transactions)
