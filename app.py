@@ -16,11 +16,10 @@ st.markdown("""
     [data-testid="stCaptionContainer"] {
         font-size: 0.85rem;
     }
-    /* Compact buttons */
-    [data-testid="stButton"] button {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.85rem;
-        min-height: 0;
+    /* Compact buttons - only for regular buttons, not form submit */
+    [data-testid="stButton"] > button {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.9rem;
     }
     /* Form labels */
     [data-testid="stWidgetLabel"] {
