@@ -12,65 +12,18 @@ def render_smart_input(client, user, model, categories, category_names):
             "Type naturally",
             placeholder="coffee 50k, lunch with Annie 200k, groceries 1.5M yesterday"
         )
-        st.caption("💡 You can also manage budgets: *add Dining 3M* · *set Groceries 5M* · *remove Travel*")
-        submitted = st.form_submit_button("Go")
+        submitted = st.form_submit_button("Go", use_container_width=True)
 
     if submitted and expense_input:
         with st.spinner("Parsing..."):
             parsed = parse_expense(expense_input, model, category_names)
         if "error" not in parsed:
-            if parsed.get("type") == "category":
-                st.session_state["parsed_category"] = parsed
-            else:
-                st.session_state["parsed_expense"] = parsed
+            st.session_state["parsed_expense"] = parsed
         else:
             st.error(parsed["error"])
 
-    # Handle category commands
-    _handle_category_command(client)
-
     # Handle expense form
     _handle_expense_form(client, user, categories, category_names)
-
-
-def _handle_category_command(client):
-    """Handle parsed category commands."""
-    if "parsed_category" not in st.session_state:
-        return
-
-    cat_cmd = st.session_state["parsed_category"]
-    action = cat_cmd.get("action")
-    name = cat_cmd.get("name")
-    budget = cat_cmd.get("budget", 0)
-
-    st.write(f"**Category Command:** {action.title()} '{name}'")
-    if budget:
-        st.write(f"**Budget:** {budget:,.0f}₫")
-
-    col_confirm, col_cancel = st.columns(2, gap="small")
-    with col_confirm:
-        if st.button("Confirm", type="primary", key="confirm_cat", use_container_width=True):
-            try:
-                if action == "add":
-                    db.add_category(client, name, budget)
-                    st.success(f"Added category: {name}")
-                elif action == "update":
-                    db.update_category_by_name(client, name, budget)
-                    st.success(f"Updated {name} budget to {budget:,.0f}₫")
-                elif action == "remove":
-                    if db.delete_category_by_name(client, name):
-                        st.success(f"Removed category: {name}")
-                    else:
-                        st.error(f"Category '{name}' not found")
-                del st.session_state["parsed_category"]
-                st.cache_data.clear()
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
-    with col_cancel:
-        if st.button("Cancel", key="cancel_cat", use_container_width=True):
-            del st.session_state["parsed_category"]
-            st.rerun()
 
 
 def _handle_expense_form(client, user, categories, category_names):
