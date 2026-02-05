@@ -1,5 +1,5 @@
 import streamlit as st
-import urllib.parse
+import database as db
 
 
 class MockUser:
@@ -16,23 +16,31 @@ class SessionUser:
 
 
 def get_user(client):
-    """Get current authenticated user from query params or session."""
+    """Get current authenticated user from session token or session state."""
     # Check session state first (faster)
     if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
 
-    # Try to restore from query params
+    # Try to restore from session token in query params
     params = st.query_params
-    user_id = params.get("uid")
-    user_email = params.get("email")
+    session_token = params.get("session")
 
-    if user_id and user_email:
-        # URL decode the email
-        user_email = urllib.parse.unquote(user_email)
-        # Restore to session state
-        st.session_state["auth_user_id"] = user_id
-        st.session_state["auth_user_email"] = user_email
-        return SessionUser(user_id, user_email)
+    if session_token:
+        # Validate session token
+        user_id = db.get_session(client, session_token)
+        if user_id:
+            # Get user email from profile
+            profile = db.get_profile(client, user_id)
+            if profile:
+                email = profile.get("display_name", "user")  # Use display_name as fallback
+                # Restore to session state
+                st.session_state["auth_user_id"] = user_id
+                st.session_state["auth_user_email"] = email
+                st.session_state["session_token"] = session_token
+                return SessionUser(user_id, email)
+        else:
+            # Invalid or expired session token, clear it
+            st.query_params.clear()
 
     return None
 
@@ -59,13 +67,16 @@ def sign_in(client, email, password):
     try:
         response = client.auth.sign_in_with_password({"email": email, "password": password})
         if response.user:
+            # Create session token
+            session_token = db.create_session(client, response.user.id)
+
             # Store user info in session state
             st.session_state["auth_user_id"] = response.user.id
             st.session_state["auth_user_email"] = response.user.email
+            st.session_state["session_token"] = session_token
 
-            # Persist to URL query params
-            st.query_params["uid"] = response.user.id
-            st.query_params["email"] = urllib.parse.quote(response.user.email)
+            # Persist only session token to URL query params (not raw user data)
+            st.query_params["session"] = session_token
 
             st.rerun()
         return response
@@ -77,6 +88,11 @@ def sign_in(client, email, password):
 def logout(client):
     """Sign out the current user."""
     try:
+        # Delete session from database
+        if "session_token" in st.session_state:
+            db.delete_session(client, st.session_state["session_token"])
+            del st.session_state["session_token"]
+
         # Clear session state
         if "auth_user_id" in st.session_state:
             del st.session_state["auth_user_id"]

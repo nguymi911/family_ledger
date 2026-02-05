@@ -172,3 +172,37 @@ def get_all_profiles(client):
     """Get all user profiles."""
     result = client.from_("profiles").select("id, display_name").order("display_name").execute()
     return result.data
+
+
+# Session functions
+def create_session(client, user_id: str):
+    """Create a new session token for a user."""
+    result = client.from_("sessions").insert({
+        "user_id": user_id
+    }).execute()
+    return result.data[0]["token"] if result.data else None
+
+
+def get_session(client, token: str):
+    """Get session by token, returns user_id if valid and not expired."""
+    result = client.from_("sessions").select(
+        "user_id, expires_at"
+    ).eq("token", token).execute()
+    if result.data:
+        session = result.data[0]
+        # Check if session is expired (comparison done in Python)
+        from datetime import datetime, timezone
+        expires_at = datetime.fromisoformat(session["expires_at"].replace("Z", "+00:00"))
+        if expires_at > datetime.now(timezone.utc):
+            return session["user_id"]
+    return None
+
+
+def delete_session(client, token: str):
+    """Delete a session token."""
+    client.from_("sessions").delete().eq("token", token).execute()
+
+
+def cleanup_expired_sessions(client):
+    """Delete all expired sessions."""
+    client.from_("sessions").delete().lt("expires_at", "now()").execute()

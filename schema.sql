@@ -34,3 +34,11 @@ CREATE TABLE public.mortgage_config (
   monthly_payment NUMERIC(15,2),
   start_date DATE
 );
+
+-- 5. Sessions: Secure session tokens for auth
+CREATE TABLE public.sessions (
+  token UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '7 days'
+);

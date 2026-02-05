@@ -82,7 +82,7 @@ if transactions:
     """, unsafe_allow_html=True)
 
     # Table header
-    col_date, col_user, col_desc, col_amount, col_actions = st.columns([2, 2, 4, 2, 1])
+    col_date, col_user, col_desc, col_amount, col_edit, col_del = st.columns([2, 2, 4, 2, 1, 1])
     with col_date:
         st.markdown("**Date**")
     with col_user:
@@ -91,7 +91,9 @@ if transactions:
         st.markdown("**Description**")
     with col_amount:
         st.markdown("**Amount**")
-    with col_actions:
+    with col_edit:
+        st.markdown("")
+    with col_del:
         st.markdown("")
 
     # Display transactions
@@ -101,7 +103,7 @@ if transactions:
         annie_tag = "👶" if tx.get("is_annie_related") else ""
         tx_date = tx["date"][5:] if tx.get("date") else "—"
 
-        col_date, col_user, col_desc, col_amount, col_actions = st.columns([2, 2, 4, 2, 1])
+        col_date, col_user, col_desc, col_amount, col_edit, col_del = st.columns([2, 2, 4, 2, 1, 1])
         with col_date:
             st.text(tx_date)
         with col_user:
@@ -110,9 +112,33 @@ if transactions:
             st.text(f"{tx['description']} {annie_tag}".strip())
         with col_amount:
             st.text(f"{tx['amount']:,.0f}₫")
-        with col_actions:
+        with col_edit:
             if st.button("✏️", key=f"edit_{tx['id']}"):
                 st.session_state["edit_transaction"] = tx
+                st.rerun()
+        with col_del:
+            # Two-step delete confirmation
+            pending_delete = st.session_state.get("confirm_delete_transaction")
+            if pending_delete == tx["id"]:
+                if st.button("Yes", key=f"confirm_{tx['id']}", type="primary"):
+                    try:
+                        db.delete_transaction(client, tx["id"])
+                        st.success("Deleted")
+                        del st.session_state["confirm_delete_transaction"]
+                        st.cache_data.clear()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+            else:
+                if st.button("🗑️", key=f"delete_{tx['id']}"):
+                    st.session_state["confirm_delete_transaction"] = tx["id"]
+                    st.rerun()
+
+        # Show confirmation message below the row
+        if st.session_state.get("confirm_delete_transaction") == tx["id"]:
+            st.warning(f"Delete this transaction? ({tx['description']}: {tx['amount']:,.0f}₫)")
+            if st.button("Cancel", key=f"cancel_{tx['id']}"):
+                del st.session_state["confirm_delete_transaction"]
                 st.rerun()
 else:
     st.info(f"No transactions for {date(selected_year, selected_month, 1).strftime('%B %Y')}")

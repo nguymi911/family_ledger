@@ -67,13 +67,28 @@ if categories_data:
                         except Exception as e:
                             st.error(f"Error: {e}")
                 with col_delete:
-                    if st.button("🗑️", key=f"delete_{cat['id']}", help="Delete"):
-                        try:
-                            db.delete_category(client, cat["id"])
-                            st.success("Deleted")
-                            st.cache_data.clear()
+                    # Two-step delete confirmation
+                    pending_delete = st.session_state.get("confirm_delete_category")
+                    if pending_delete == cat["id"]:
+                        if st.button("Confirm", key=f"confirm_{cat['id']}", type="primary"):
+                            try:
+                                db.delete_category(client, cat["id"])
+                                st.success("Deleted")
+                                del st.session_state["confirm_delete_category"]
+                                st.cache_data.clear()
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+                    else:
+                        if st.button("🗑️", key=f"delete_{cat['id']}", help="Delete"):
+                            st.session_state["confirm_delete_category"] = cat["id"]
                             st.rerun()
-                        except Exception as e:
-                            st.error(f"Error: {e}")
+
+            # Show cancel button on separate line when confirming
+            if st.session_state.get("confirm_delete_category") == cat["id"]:
+                st.warning(f"Delete **{cat['name']}**? This will unlink all transactions.")
+                if st.button("Cancel", key=f"cancel_{cat['id']}"):
+                    del st.session_state["confirm_delete_category"]
+                    st.rerun()
 else:
     st.info("No categories yet. Add one above.")
