@@ -127,7 +127,7 @@ if transactions:
                 st.markdown(f"**{tx['amount']:,.0f}₫**")
 
             # Action buttons
-            col_edit, col_del, col_space = st.columns([1, 1, 3])
+            col_edit, col_del = st.columns(2)
             with col_edit:
                 if st.button("Edit", key=f"edit_{tx['id']}", use_container_width=True):
                     st.session_state["edit_transaction"] = tx
