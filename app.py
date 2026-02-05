@@ -12,6 +12,14 @@ user = require_login(client)
 # Check if user has a profile, create one if not
 profile = get_profile(client, user.id)
 
+# If no profile and user came from stale session state (not fresh login), clear and restart
+if not profile and "auth_user_id" in st.session_state and "session_token" not in st.session_state:
+    # Stale session state without valid session token - clear and show login
+    del st.session_state["auth_user_id"]
+    if "auth_user_email" in st.session_state:
+        del st.session_state["auth_user_email"]
+    st.rerun()
+
 if not profile:
     # Hide sidebar on profile setup page
     st.markdown("""

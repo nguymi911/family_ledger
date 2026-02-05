@@ -66,8 +66,10 @@ class SessionUser:
 
 def get_user(client):
     """Get current authenticated user from session token or session state."""
-    # Check session state first (faster)
-    if "auth_user_id" in st.session_state and "auth_user_email" in st.session_state:
+    # Check session state first (faster) - but only if we have a session token
+    if ("auth_user_id" in st.session_state and
+        "auth_user_email" in st.session_state and
+        "session_token" in st.session_state):
         return SessionUser(st.session_state["auth_user_id"], st.session_state["auth_user_email"])
 
     # Try to restore session from cookie if not in URL
@@ -79,12 +81,7 @@ def get_user(client):
 
     if session_token:
         # Validate session token
-        try:
-            user_id = db.get_session(client, session_token)
-        except Exception as e:
-            st.error(f"Session lookup error: {e}")
-            return None
-
+        user_id = db.get_session(client, session_token)
         if user_id:
             # Get user email from profile
             profile = db.get_profile(client, user_id)
@@ -95,8 +92,6 @@ def get_user(client):
                 st.session_state["auth_user_email"] = email
                 st.session_state["session_token"] = session_token
                 return SessionUser(user_id, email)
-            else:
-                st.error(f"No profile found for user_id: {user_id}")
         else:
             # Invalid or expired session token, clear it
             st.query_params.clear()
