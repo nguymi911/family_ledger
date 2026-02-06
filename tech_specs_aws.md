@@ -4,6 +4,201 @@
 
 Rebuild Annie Budget as a serverless, AI-first application on AWS. The app provides household expense tracking with natural language input powered by Amazon Bedrock.
 
+---
+
+## Decision Log
+
+### 1. Database: DynamoDB
+
+**Decision:** Use DynamoDB with single-table design
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **DynamoDB** | Serverless, scales to zero, pay-per-request, fast | Requires upfront access pattern design, no ad-hoc queries |
+| RDS PostgreSQL | Familiar SQL, flexible queries, matches current Supabase | Always-on cost (~$15/month min), requires connection management |
+| Aurora Serverless v2 | SQL + scales to zero | More expensive, 0.5 ACU minimum (~$43/month) |
+
+**Rationale:**
+- Household app has predictable, simple access patterns (by month, by user)
+- DynamoDB's pay-per-request means near-zero cost at low usage
+- Learning goal: DynamoDB is a key AWS skill worth learning
+- No need for complex joins or ad-hoc reporting
+
+---
+
+### 2. Authentication: Cognito
+
+**Decision:** Use Amazon Cognito User Pools
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Cognito** | Native AWS integration, free tier, handles JWT | Verbose setup, limited customization, confusing docs |
+| Auth0 | Better DX, more features | External dependency, cost at scale |
+| Roll your own (Lambda + DynamoDB) | Full control | Security risk, reinventing the wheel |
+| Firebase Auth | Excellent DX | Google service, adds cross-cloud complexity |
+
+**Rationale:**
+- Native integration with API Gateway authorizers (zero code)
+- Free for < 50,000 monthly active users
+- Learning goal: Understanding Cognito is valuable for AWS work
+- Trade-off accepted: Cognito's DX is worse but avoids external dependencies
+
+---
+
+### 3. Compute: Lambda
+
+**Decision:** Use AWS Lambda for all API endpoints
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Lambda** | Pay-per-use, scales to zero, no servers | Cold starts, 15-min timeout, stateless |
+| ECS Fargate | Containers, longer running, more control | Always-on cost (~$10+/month minimum) |
+| App Runner | Simpler container deployment | Less control, still always-on cost |
+| EC2 | Full control, predictable | Overkill, requires maintenance |
+
+**Rationale:**
+- Expense tracking has bursty, infrequent usage (few requests/day)
+- Cold starts acceptable for non-real-time budget app
+- Pay-per-request means ~$0 at household scale
+- Learning goal: Lambda is foundational serverless skill
+
+---
+
+### 4. AI Service: Bedrock with Claude
+
+**Decision:** Use Amazon Bedrock with Claude Haiku model
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Bedrock (Claude)** | Managed, native AWS, Claude quality | Limited model selection |
+| Bedrock (Titan) | Cheapest, AWS-native | Lower quality for NLP tasks |
+| SageMaker endpoints | Full control, any model | Complex setup, always-on cost |
+| External API (OpenAI/Anthropic direct) | Latest models, familiar | External dependency, egress costs, API keys to manage |
+| Self-hosted LLM | Full control, no per-token cost | Significant complexity, GPU costs |
+
+**Rationale:**
+- Bedrock is fully managed, no infrastructure to maintain
+- Claude Haiku offers best quality/cost ratio for simple parsing
+- Native IAM integration (no API keys to manage)
+- Learning goal: Bedrock is AWS's AI strategy, worth learning
+- Trade-off: Slightly behind on model versions vs direct API
+
+---
+
+### 5. Frontend: React + Vite
+
+**Decision:** React SPA with Vite, hosted on S3 + CloudFront
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **React + Vite** | Fast builds, huge ecosystem, Amplify UI components | SPA limitations (SEO, initial load) |
+| Next.js on Amplify | SSR, better SEO, API routes | Overkill for private app, more complex |
+| Vue/Svelte | Lighter, simpler | Smaller ecosystem, less AWS tooling support |
+| Keep Streamlit | Already built, Python | Session issues, limited customization |
+| Mobile app (React Native) | Native experience | More complexity, app store deployment |
+
+**Rationale:**
+- Private app doesn't need SSO/SEO benefits of SSR
+- Amplify UI provides pre-built Cognito auth components
+- React ecosystem has best AWS integration (Amplify SDK)
+- S3 + CloudFront hosting is essentially free
+- Trade-off: Losing Streamlit's rapid prototyping speed
+
+---
+
+### 6. Infrastructure as Code: AWS SAM
+
+**Decision:** Use AWS SAM (Serverless Application Model)
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **AWS SAM** | Serverless-focused, simple YAML, good CLI | Less flexible than CDK |
+| AWS CDK | Full programming language, type-safe, reusable constructs | Steeper learning curve, more verbose for simple cases |
+| Terraform | Cloud-agnostic, huge community | Another tool to learn, state management |
+| Serverless Framework | Popular, multi-cloud | External tool, plugin ecosystem fragmented |
+| Console (ClickOps) | Quick to start | Not reproducible, error-prone, no version control |
+
+**Rationale:**
+- SAM is purpose-built for Lambda + API Gateway + DynamoDB
+- Simpler than CDK for straightforward serverless apps
+- Built-in local testing (`sam local invoke`)
+- Learning goal: SAM is sufficient, CDK can come later
+- Trade-off: Less flexibility than CDK for complex infrastructure
+
+---
+
+### 7. Data Modeling: Single-Table Design
+
+**Decision:** Use DynamoDB single-table design with composite keys
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Single-table** | Efficient queries, lower cost, fewer round-trips | Complex key design, harder to understand initially |
+| Multi-table | Simpler mental model, easier migrations | More tables to manage, can't do cross-entity transactions |
+| Single-table with streams | Enables derived views | Added complexity |
+
+**Rationale:**
+- App has clear entity relationships (household → transactions, categories)
+- Single table allows fetching related data in one query
+- Lower cost (one table to provision/monitor)
+- Learning goal: Single-table design is a key DynamoDB skill
+- Trade-off: Requires upfront planning of access patterns
+
+---
+
+### 8. API Style: REST
+
+**Decision:** Use REST API via API Gateway
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **REST** | Simple, well-understood, good API Gateway integration | Over/under-fetching, multiple round-trips |
+| GraphQL (AppSync) | Flexible queries, real-time subscriptions | More complex, overkill for simple CRUD |
+| gRPC | Efficient, typed contracts | Not browser-native, needs proxy |
+
+**Rationale:**
+- Simple CRUD operations don't benefit from GraphQL flexibility
+- REST is easier to debug, test, and understand
+- API Gateway REST integration is mature and well-documented
+- Learning goal: REST on API Gateway is foundational
+- Trade-off: If app grows to need real-time sync, would reconsider AppSync
+
+---
+
+### 9. File Structure: Monorepo
+
+**Decision:** Single repository with backend/ and frontend/ directories
+
+**Alternatives Considered:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Monorepo** | Atomic changes, shared config, simpler CI | Can grow unwieldy |
+| Separate repos | Independent deployments, clear boundaries | Coordination overhead, version sync issues |
+| Nx/Turborepo monorepo | Optimized builds, caching | Additional tooling complexity |
+
+**Rationale:**
+- Small team (1-2 people), atomic commits are valuable
+- Shared types/schemas between frontend and backend
+- Simpler CI/CD pipeline
+- Trade-off: Would split if team grows or deployment needs diverge
+
 ## Architecture
 
 ```
